@@ -61,7 +61,7 @@ app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
   const serverQR = http.createServer(appQR);
   const io = socketIo(serverQR);
 
-  const portQR = 8083;
+  const portQR = 8082;
 
   appQR.get('/', (req, res) => {
     res.sendFile(__dirname + '/public/sendMessageQR.html');

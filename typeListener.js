@@ -607,7 +607,7 @@ function writeJSONFile(nomeArquivo, dados) {
 
 const DATABASE_FILE_SYSTEM = 'typeSystemDB.json';
 
-function addObjectSystem(url_chat) {
+function addObjectSystemSeq(url_chat) {
   const dadosAtuais = readJSONFile(DATABASE_FILE_SYSTEM);
 
   // Verificar a unicidade do url_chat
@@ -619,6 +619,11 @@ function addObjectSystem(url_chat) {
   const objeto = {url_chat};  
 
   dadosAtuais.push(objeto);
+  writeJSONFile(DATABASE_FILE_SYSTEM, dadosAtuais);
+}
+
+function addObjectSystem(url_chat) {  
+  const dadosAtuais = [{ url_chat }];
   writeJSONFile(DATABASE_FILE_SYSTEM, dadosAtuais);
 }
 

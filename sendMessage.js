@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 const socketIo = require('socket.io');
 const QRCode = require('qrcode');
 const express = require('express');
+const cors = require('cors');
 const { Client, Buttons, List, MessageMedia, LocalAuth } = require('whatsapp-web.js');
 require('dotenv').config();
 
@@ -17,6 +18,7 @@ const server = http.createServer(app);
 
 const port = 3000;
 
+app.use(cors());
 app.use(express.static('public'));
 //app.use(bodyParser.json());
 app.use(bodyParser.json({ limit: '50mb' }));
@@ -61,7 +63,7 @@ app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
   const serverQR = http.createServer(appQR);
   const io = socketIo(serverQR);
 
-  const portQR = 8082;
+  const portQR = 8083;
 
   appQR.get('/', (req, res) => {
     res.sendFile(__dirname + '/public/sendMessageQR.html');

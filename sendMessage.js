@@ -225,35 +225,13 @@ app.post('/sendMessage', async (req, res) => {
     }
 });
 
-app.post('/kiwify', bodyParser.raw({type: 'application/json'}), (req, res) => {
-  const secret = 'YOUR_SECRET_TOKEN'; // Garanta que isso esteja correto
-  const signatureReceived = req.query.signature;
+// Endpoint /kiwify para receber eventos
+app.post('/kiwify', (req, res) => {
+  // Imprime o corpo da requisição no console
+  console.log('Evento recebido em /kiwify:', req.body);
 
-  // `req.body` já é um Buffer devido ao uso de bodyParser.raw({type: 'application/json'})
-  // Então, você deve passá-lo diretamente para o Hmac.update() sem conversão.
-
-  const hmac = crypto.createHmac('sha1', secret);
-  hmac.update(req.body); // Aqui, req.body é um Buffer e é passado diretamente.
-
-  const calculatedSignature = hmac.digest('hex');
-
-  if (signatureReceived !== calculatedSignature) {
-      return res.status(400).send({ error: 'Assinatura incorreta' });
-  }
-
-  // Agora que a assinatura foi verificada, converta req.body para um objeto JSON para processamento.
-  let eventData;
-  try {
-      eventData = JSON.parse(req.body.toString()); // Converte Buffer para String, depois para JSON
-  } catch (error) {
-      return res.status(400).send({ error: 'Erro ao analisar o JSON' });
-  }
-
-  // Processamento do evento aqui
-  console.log('Evento de Webhook recebido:', eventData);
-
-  // Responda com sucesso
-  return res.status(200).send({ status: 'ok' });
+  // Responde com sucesso assim que receber o evento
+  res.status(200).send({ status: 'ok' });
 });
 
 server.listen(port, () => {

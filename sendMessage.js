@@ -225,38 +225,34 @@ app.post('/sendMessage', async (req, res) => {
     }
 });
 
-app.post('/kiwify', bodyParser.raw({ type: 'application/json' }), (req, res) => {
-  // A req.body já é um Buffer devido ao bodyParser.raw, então podemos usá-lo diretamente
+app.post('/kiwify', bodyParser.raw({type: 'application/json'}), (req, res) => {
+  const secret = 'YOUR_SECRET_TOKEN'; // Garanta que isso esteja correto
+  const signatureReceived = req.query.signature;
 
-  // Verifica se o método é POST
-  if (req.method !== 'POST') {
-      return res.status(200).send({ status: 'ok' });
+  // `req.body` já é um Buffer devido ao uso de bodyParser.raw({type: 'application/json'})
+  // Então, você deve passá-lo diretamente para o Hmac.update() sem conversão.
+
+  const hmac = crypto.createHmac('sha1', secret);
+  hmac.update(req.body); // Aqui, req.body é um Buffer e é passado diretamente.
+
+  const calculatedSignature = hmac.digest('hex');
+
+  if (signatureReceived !== calculatedSignature) {
+      return res.status(400).send({ error: 'Assinatura incorreta' });
   }
 
-  // Calcula a assinatura usando o corpo da requisição como Buffer
-  const signature = req.query.signature;
-  const calculatedSignature = crypto.createHmac('sha1', KIWIFY_TOKEN)
-      .update(req.body) // Usa o Buffer diretamente aqui
-      .digest('hex');
-
-  // Verifica se a assinatura calculada corresponde à assinatura recebida
-  if (signature !== calculatedSignature) {
-      return res.status(400).send({ error: 'Incorrect signature' });
-  }
-
-  // Como o bodyParser.raw foi usado, o corpo da requisição é um Buffer.
-  // Precisamos convertê-lo em um objeto JSON para trabalhar com os dados.
-  let order = {};
+  // Agora que a assinatura foi verificada, converta req.body para um objeto JSON para processamento.
+  let eventData;
   try {
-      order = JSON.parse(req.body.toString());
+      eventData = JSON.parse(req.body.toString()); // Converte Buffer para String, depois para JSON
   } catch (error) {
       return res.status(400).send({ error: 'Erro ao analisar o JSON' });
   }
 
-  // Neste ponto, você tem o objeto `order` contendo os dados do pedido e pode processá-lo conforme necessário
-  console.log('Pedido recebido:', order);
+  // Processamento do evento aqui
+  console.log('Evento de Webhook recebido:', eventData);
 
-  // Retorna uma resposta de sucesso para confirmar o recebimento do webhook
+  // Responda com sucesso
   return res.status(200).send({ status: 'ok' });
 });
 

@@ -5,6 +5,7 @@ const socketIo = require('socket.io');
 const QRCode = require('qrcode');
 const express = require('express');
 const cors = require('cors');
+const fs = require('fs');
 const { Client, Buttons, List, MessageMedia, LocalAuth } = require('whatsapp-web.js');
 require('dotenv').config();
 
@@ -23,6 +24,32 @@ app.use(express.static('public'));
 //app.use(bodyParser.json());
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+
+function initializeDBTypebotV2() {
+  // Verifica se o arquivo do banco de dados já existe
+  if (!fs.existsSync(DATABASE_FILE_TYPEBOT_V2)) {
+      // Se não existir, inicializa com um objeto vazio
+      const db = {};
+      writeJSONFileTypebotV2(DATABASE_FILE_TYPEBOT_V2, db);
+  } else {
+      // Se já existir, mantém os dados existentes
+      console.log('Banco de dados V2 pronto no sendMessage.');
+  }
+}
+
+function listAllFromDBTypebotV2() {
+  return readJSONFileTypebotV2(DATABASE_FILE_TYPEBOT_V2);
+}
+
+function readJSONFileTypebotV2(filename) {
+  try {
+      return JSON.parse(fs.readFileSync(filename, 'utf8'));
+  } catch (error) {
+      return {};
+  }
+}
+
+initializeDBTypebotV2();
 
 // Configurações para o primeiro cliente (Windows)
 /*const client = new Client({
@@ -122,17 +149,24 @@ client.on('qr', qr => {
 
 app.post('/sendMessage', async (req, res) => {
     const { destinatario, mensagem, tipo, msg, media, token } = req.body;
+    
+    
+    // Nova lógica para permitir mensagens sem token se a mensagem for um "gatilho"
+    const dbTriggers = listAllFromDBTypebotV2(); // Obtém todos os registros do banco de dados
+    let isTriggerMessage = false;
 
-    // Obter o endereço IP do cliente que faz a requisição
-    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-
-    // Verifique se o pedido não vem do localhost
-    if (clientIp !== '127.0.0.1' && clientIp !== '::1') {
-        // Verificar se o token é válido
-        if (token !== SECURITY_TOKEN) {
-            return res.status(401).json({ status: 'falha', mensagem: 'Token inválido' });
+    // Verifica se a mensagem corresponde a algum "gatilho" no banco de dados
+    Object.values(dbTriggers).forEach(trigger => {
+        if (tipo === 'text' && mensagem === trigger.gatilho) {
+            isTriggerMessage = true;
         }
+    });
+
+    // Se não for uma mensagem de gatilho e o token não for válido, retorna erro
+    if (!isTriggerMessage && token !== SECURITY_TOKEN) {
+        return res.status(401).json({ status: 'falha', mensagem: 'Token inválido' });
     }
+    
 
     if (!client || !client.info) {
         return res.status(402).json({status: 'falha', message: 'Cliente Não Autenticado'});

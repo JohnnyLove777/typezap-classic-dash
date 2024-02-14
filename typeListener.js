@@ -36,6 +36,7 @@ let restartAPI = false;
 // Fim do Listener do Erro do Server
 
 const DATABASE_FILE = "typesessaodb.json";
+const token = "a9387747d4069f22fca5903858cdda24";
 const init_delay = 60000; // Exponential Backoff delay
 const db_length = 600; // Tamanho do banco de dados
 const sessao = "typeListener";
@@ -1172,7 +1173,8 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
                       destinatario: datafrom,
                       mensagem: formattedText,
                       tipo: "text",
-                      msg: data
+                      msg: data,
+                      token: token
                   })
               });
       
@@ -1220,7 +1222,8 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
                     destinatario: datafrom,
                     media: media,
                     tipo: "image",
-                    msg: data
+                    msg: data,
+                    token: token
                 })
             });
     
@@ -1267,7 +1270,8 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
                     destinatario: datafrom,
                     media: media,
                     tipo: "video",
-                    msg: data
+                    msg: data,
+                    token: token
                 })
             });
     
@@ -1315,7 +1319,8 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
                     destinatario: datafrom,
                     media: media,
                     tipo: "audio",                    
-                    msg: data
+                    msg: data,
+                    token: token
                 })
             });
     
@@ -1790,7 +1795,8 @@ async function sendRequest(groupID, content, type) {
               body: JSON.stringify({
                   destinatario: groupID,
                   mensagem: content,
-                  tipo: type
+                  tipo: type,
+                  token: token
               })
           });
 
@@ -1836,7 +1842,8 @@ async function sendMediaRequest(groupID, media, type) {
               body: JSON.stringify({
                   destinatario: groupID,
                   media: media, // Aqui, 'media' é o objeto com mimetype, data e filename
-                  tipo: type
+                  tipo: type,
+                  token: token
               })
           });
 
@@ -1988,7 +1995,8 @@ async function createSessionJohnny(data, url_registro, fluxo) {
                       destinatario: data.from,
                       mensagem: formattedText,
                       tipo: "text",
-                      msg: data
+                      msg: data,
+                      token: token
                   })
               });
       
@@ -2036,7 +2044,8 @@ async function createSessionJohnny(data, url_registro, fluxo) {
                     destinatario: data.from,
                     media: media,
                     tipo: "image",
-                    msg: data
+                    msg: data,
+                    token: token
                 })
             });
     
@@ -2083,7 +2092,8 @@ async function createSessionJohnny(data, url_registro, fluxo) {
                     destinatario: data.from,
                     media: media,
                     tipo: "video",
-                    msg: data
+                    msg: data,
+                    token: token
                 })
             });
     
@@ -2131,7 +2141,8 @@ async function createSessionJohnny(data, url_registro, fluxo) {
                     destinatario: data.from,
                     media: media,
                     tipo: "audio",                    
-                    msg: data
+                    msg: data,
+                    token: token
                 })
             });
     
@@ -2389,7 +2400,8 @@ client.on('message', async msg => {
                             destinatario: msg.from,
                             mensagem: formattedText,
                             tipo: "text",
-                            msg: msg
+                            msg: msg,
+                            token: token
                         })
                     });
             
@@ -2437,7 +2449,8 @@ client.on('message', async msg => {
                           destinatario: msg.from,
                           media: media,
                           tipo: "image",
-                          msg: msg
+                          msg: msg,
+                          token: token
                       })
                   });
           
@@ -2484,7 +2497,8 @@ client.on('message', async msg => {
                           destinatario: msg.from,
                           media: media,
                           tipo: "video",
-                          msg: msg
+                          msg: msg,
+                          token: token
                       })
                   });
           
@@ -2532,7 +2546,8 @@ client.on('message', async msg => {
                           destinatario: msg.from,
                           media: media,
                           tipo: "audio",                    
-                          msg: msg
+                          msg: msg,
+                          token: token
                       })
                   });
           
@@ -3395,7 +3410,8 @@ if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) 
                     destinatario: vote.voter,
                     mensagem: formattedText,
                     tipo: "text",
-                    msg: vote
+                    msg: vote,
+                    token: token
                 })
             });
     
@@ -3443,7 +3459,8 @@ if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) 
                   destinatario: vote.voter,
                   media: media,
                   tipo: "image",
-                  msg: vote
+                  msg: vote,
+                  token: token
               })
           });
   
@@ -3490,7 +3507,8 @@ if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) 
                   destinatario: vote.voter,
                   media: media,
                   tipo: "video",
-                  msg: vote
+                  msg: vote,
+                  token: token
               })
           });
   
@@ -3537,7 +3555,8 @@ if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) 
                   destinatario: vote.voter,
                   media: media,
                   tipo: "audio",                    
-                  msg: vote
+                  msg: vote,
+                  token: token
               })
           });
   

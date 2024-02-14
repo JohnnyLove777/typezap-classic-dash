@@ -229,11 +229,11 @@ app.post('/kiwify', bodyParser.raw({type: 'application/json'}), (req, res) => {
   const secret = 'SEU_TOKEN_SECRETO_KIWIFY';
   const signature = req.query.signature;
   // Certifique-se de que o corpo da requisição seja tratado como raw Buffer para a verificação da assinatura
-  const bodyBuffer = Buffer.from(req.body);
+  const bodyBuffer = req.body;
   
   const calculatedSignature = crypto.createHmac('sha1', secret)
-                                     .update(bodyBuffer) // Aqui você usa o Buffer diretamente
-                                     .digest('hex');
+                                   .update(bodyBuffer)
+                                   .digest('hex');
 
   if (signature !== calculatedSignature) {
       return res.status(400).send({ error: 'Assinatura incorreta' });

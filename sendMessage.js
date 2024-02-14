@@ -25,6 +25,8 @@ app.use(express.static('public'));
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
+const DATABASE_FILE_TYPEBOT_V2 = 'typebotDBV2.json';
+
 function initializeDBTypebotV2() {
   // Verifica se o arquivo do banco de dados já existe
   if (!fs.existsSync(DATABASE_FILE_TYPEBOT_V2)) {

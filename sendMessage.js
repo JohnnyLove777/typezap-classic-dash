@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 //const qrcode = require('qrcode-terminal');
 const socketIo = require('socket.io');
 const QRCode = require('qrcode');
+const crypto = require('crypto');
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
@@ -11,6 +12,7 @@ require('dotenv').config();
 
 // Gere o seu token 32 caracteres
 const SECURITY_TOKEN = "a9387747d4069f22fca5903858cdda24";
+const KIWIFY_TOKEN = process.env.KIWIFY_TOKEN;
 
 const sessao = "sendMessage";
 
@@ -221,6 +223,38 @@ app.post('/sendMessage', async (req, res) => {
         console.error(error);        
         res.status(500).json({ status: 'falha', mensagem: 'Erro ao enviar mensagem' });
     }
+});
+
+app.post('/kiwify', bodyParser.raw({type: 'application/json'}), (req, res) => {
+  const secret = KIWIFY_TOKEN; // Substitua pelo seu token secreto da Kiwify.
+  const signature = req.query.signature; // Assinatura recebida na querystring.
+  const calculatedSignature = crypto.createHmac('sha1', secret)
+                                     .update(req.body)
+                                     .digest('hex');
+
+  // Verifica se a assinatura é válida.
+  if (signature !== calculatedSignature) {
+      return res.status(400).send({ error: 'Assinatura incorreta' });
+  }
+
+  let eventData;
+  try {
+      eventData = JSON.parse(req.body);
+  } catch (error) {
+      return res.status(400).send({ error: 'Erro ao analisar o JSON' });
+  }
+
+  // Extrai as informações necessárias do JSON.
+  const { order_status, webhook_event_type, Product, Customer } = eventData;
+  const product_name = Product.product_name;
+  const customer_full_name = Customer.full_name;
+  const customer_mobile = Customer.mobile;
+
+  // Aqui, você pode adicionar a lógica para processar os dados do evento.
+  console.log(`Evento processado: ${webhook_event_type}, Status: ${order_status}, Produto: ${product_name}, Cliente: ${customer_full_name}, Celular: ${customer_mobile}`);
+
+  // Responde para confirmar o recebimento.
+  res.status(200).send({ status: 'ok' });
 });
 
 server.listen(port, () => {

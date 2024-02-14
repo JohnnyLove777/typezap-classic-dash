@@ -226,20 +226,23 @@ app.post('/sendMessage', async (req, res) => {
 });
 
 app.post('/kiwify', bodyParser.raw({type: 'application/json'}), (req, res) => {
-  const secret = KIWIFY_TOKEN; // Substitua pelo seu token secreto da Kiwify.
-  const signature = req.query.signature; // Assinatura recebida na querystring.
+  const secret = 'SEU_TOKEN_SECRETO_KIWIFY';
+  const signature = req.query.signature;
+  // Certifique-se de que o corpo da requisição seja tratado como raw Buffer para a verificação da assinatura
+  const bodyBuffer = Buffer.from(req.body);
+  
   const calculatedSignature = crypto.createHmac('sha1', secret)
-                                     .update(req.body)
+                                     .update(bodyBuffer) // Aqui você usa o Buffer diretamente
                                      .digest('hex');
 
-  // Verifica se a assinatura é válida.
   if (signature !== calculatedSignature) {
       return res.status(400).send({ error: 'Assinatura incorreta' });
   }
 
+  // Como você já tratou o req.body como raw, precisa converter para JSON
   let eventData;
   try {
-      eventData = JSON.parse(req.body);
+      eventData = JSON.parse(bodyBuffer.toString()); // Converte o Buffer para string, depois para JSON
   } catch (error) {
       return res.status(400).send({ error: 'Erro ao analisar o JSON' });
   }

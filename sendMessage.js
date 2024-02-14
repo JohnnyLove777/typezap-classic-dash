@@ -225,39 +225,39 @@ app.post('/sendMessage', async (req, res) => {
     }
 });
 
-app.post('/kiwify', bodyParser.raw({type: 'application/json'}), (req, res) => {
-  const secret = 'SEU_TOKEN_SECRETO_KIWIFY';
-  const signature = req.query.signature;
-  // Certifique-se de que o corpo da requisição seja tratado como raw Buffer para a verificação da assinatura
-  const bodyBuffer = req.body;
-  
-  const calculatedSignature = crypto.createHmac('sha1', secret)
-                                   .update(bodyBuffer)
-                                   .digest('hex');
+app.post('/kiwify', bodyParser.raw({ type: 'application/json' }), (req, res) => {
+  // A req.body já é um Buffer devido ao bodyParser.raw, então podemos usá-lo diretamente
 
-  if (signature !== calculatedSignature) {
-      return res.status(400).send({ error: 'Assinatura incorreta' });
+  // Verifica se o método é POST
+  if (req.method !== 'POST') {
+      return res.status(200).send({ status: 'ok' });
   }
 
-  // Como você já tratou o req.body como raw, precisa converter para JSON
-  let eventData;
+  // Calcula a assinatura usando o corpo da requisição como Buffer
+  const signature = req.query.signature;
+  const calculatedSignature = crypto.createHmac('sha1', KIWIFY_TOKEN)
+      .update(req.body) // Usa o Buffer diretamente aqui
+      .digest('hex');
+
+  // Verifica se a assinatura calculada corresponde à assinatura recebida
+  if (signature !== calculatedSignature) {
+      return res.status(400).send({ error: 'Incorrect signature' });
+  }
+
+  // Como o bodyParser.raw foi usado, o corpo da requisição é um Buffer.
+  // Precisamos convertê-lo em um objeto JSON para trabalhar com os dados.
+  let order = {};
   try {
-      eventData = JSON.parse(bodyBuffer.toString()); // Converte o Buffer para string, depois para JSON
+      order = JSON.parse(req.body.toString());
   } catch (error) {
       return res.status(400).send({ error: 'Erro ao analisar o JSON' });
   }
 
-  // Extrai as informações necessárias do JSON.
-  const { order_status, webhook_event_type, Product, Customer } = eventData;
-  const product_name = Product.product_name;
-  const customer_full_name = Customer.full_name;
-  const customer_mobile = Customer.mobile;
+  // Neste ponto, você tem o objeto `order` contendo os dados do pedido e pode processá-lo conforme necessário
+  console.log('Pedido recebido:', order);
 
-  // Aqui, você pode adicionar a lógica para processar os dados do evento.
-  console.log(`Evento processado: ${webhook_event_type}, Status: ${order_status}, Produto: ${product_name}, Cliente: ${customer_full_name}, Celular: ${customer_mobile}`);
-
-  // Responde para confirmar o recebimento.
-  res.status(200).send({ status: 'ok' });
+  // Retorna uma resposta de sucesso para confirmar o recebimento do webhook
+  return res.status(200).send({ status: 'ok' });
 });
 
 server.listen(port, () => {

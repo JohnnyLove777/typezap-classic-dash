@@ -13,28 +13,6 @@ const wss = new WebSocket.Server({ server });
 const path = require('path');
 const { Client, Buttons, List, MessageMedia, LocalAuth, Poll } = require('whatsapp-web.js');
 
-// Listener para pegar Erro no Server e Restartar
-const exec = require('child_process').exec;
-const EventEmitter = require('events');
-class MyEmitter extends EventEmitter {}
-const myEmitter = new MyEmitter();
-
-myEmitter.on('errorEvent', (error) => {
-    console.log('Erro detectado, tentando reiniciar o serviço:', error);
-
-    // Executar o comando para reiniciar o processo
-    exec('pm2 restart sendMessage', (err, stdout, stderr) => {
-        if (err) {
-            console.error('Erro ao tentar reiniciar o serviço:', err);
-            return;
-        }
-        console.log('Saída do comando de reinicialização:', stdout);
-    });
-});
-
-let restartAPI = false;
-// Fim do Listener do Erro do Server
-
 const DATABASE_FILE = "typesessaodb.json";
 const token = "a9387747d4069f22fca5903858cdda24";
 const init_delay = 60000; // Exponential Backoff delay
@@ -74,6 +52,16 @@ const client = new Client({
     ]
   }
 });
+
+async function sendMessage(phoneNumber, messageToSend) {
+  try {
+      await client.sendMessage(phoneNumber, messageToSend);      
+  } catch (error) {
+      console.error(`Falha ao enviar mensagem para ${phoneNumber}: erro: ${error}`);
+      // Sinaliza ao PM2 para reiniciar o aplicativo devido a um erro crítico
+      process.exit(1);
+  }
+}
 
 const delay = ms => new Promise(res => setTimeout(res, ms));
 
@@ -1186,26 +1174,24 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
               return await response.json();
           };
       
-          while (retries < maxRetries) {
-              try {
-                  await sendRequest();
-                  restartAPI = false; // Reinicializa o flag quando a requisição é bem-sucedida
-                  break; // Sai do loop se a requisição for bem-sucedida
-              } catch (error) {
-                  retries++;
-                  console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
-                  if (!restartAPI) {
-                      myEmitter.emit('errorEvent', error);
-                      restartAPI = true;
-                  }
-                  await new Promise(resolve => setTimeout(resolve, delay));
-                  delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
-              }
-          }
-      
-          if (retries === maxRetries) {
-              console.error('Erro: Número máximo de tentativas de envio atingido.');
-          }
+          const sendMessageWithRetry = async () => {
+            while (retries < maxRetries) {
+                try {
+                    await sendRequest();
+                    console.log('Mensagem enviada com sucesso.');
+                    return;
+                } catch (error) {
+                    retries++;
+                    console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                }
+            }
+            console.error('Erro: Número máximo de tentativas de envio atingido.');
+            process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
+        };
+        
+        sendMessageWithRetry();
       }      
       }
       if (message.type === 'image') {
@@ -1235,26 +1221,24 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
             return await response.json();
         };
     
-        while (retries < maxRetries) {
-            try {
-                await sendRequest();
-                restartAPI = false; // Reinicializa o flag quando a requisição é bem-sucedida
-                break; // Sai do loop se a requisição for bem-sucedida
-            } catch (error) {
-                retries++;
-                console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
-                if (!restartAPI) {
-                    myEmitter.emit('errorEvent', error);
-                    restartAPI = true;
-                }
-                await new Promise(resolve => setTimeout(resolve, delay));
-                delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
-            }
-        }
-    
-        if (retries === maxRetries) {
-            console.error('Erro: Número máximo de tentativas de envio atingido.');
-        }
+        const sendMessageWithRetry = async () => {
+          while (retries < maxRetries) {
+              try {
+                  await sendRequest();
+                  console.log('Mensagem enviada com sucesso.');
+                  return;
+              } catch (error) {
+                  retries++;
+                  console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                  await new Promise(resolve => setTimeout(resolve, delay));
+                  delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+              }
+          }
+          console.error('Erro: Número máximo de tentativas de envio atingido.');
+          process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
+      };
+      
+      sendMessageWithRetry();
       }                          
       if (message.type === 'video') {
         let retries = 0;
@@ -1283,26 +1267,24 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
             return await response.json();
         };
     
-        while (retries < maxRetries) {
-            try {
-                await sendRequest();
-                restartAPI = false; // Reinicializa o flag quando a requisição é bem-sucedida
-                break; // Sai do loop se a requisição for bem-sucedida
-            } catch (error) {
-                retries++;
-                console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
-                if (!restartAPI) {
-                    myEmitter.emit('errorEvent', error);
-                    restartAPI = true;
-                }
-                await new Promise(resolve => setTimeout(resolve, delay));
-                delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
-            }
-        }
-    
-        if (retries === maxRetries) {
-            console.error('Erro: Número máximo de tentativas de envio atingido.');
-        }
+        const sendMessageWithRetry = async () => {
+          while (retries < maxRetries) {
+              try {
+                  await sendRequest();
+                  console.log('Mensagem enviada com sucesso.');
+                  return;
+              } catch (error) {
+                  retries++;
+                  console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                  await new Promise(resolve => setTimeout(resolve, delay));
+                  delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+              }
+          }
+          console.error('Erro: Número máximo de tentativas de envio atingido.');
+          process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
+      };
+      
+      sendMessageWithRetry();
       }                            
       if (message.type === 'audio') {
         let retries = 0;
@@ -1332,26 +1314,24 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
             return await response.json();
         };
     
-        while (retries < maxRetries) {
-            try {
-                await sendRequest();
-                restartAPI = false; // Reinicializa o flag quando a requisição é bem-sucedida
-                break; // Sai do loop se a requisição for bem-sucedida
-            } catch (error) {
-                retries++;
-                console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
-                if (!restartAPI) {
-                    myEmitter.emit('errorEvent', error);
-                    restartAPI = true;
-                }
-                await new Promise(resolve => setTimeout(resolve, delay));
-                delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
-            }
-        }
-    
-        if (retries === maxRetries) {
-            console.error('Erro: Número máximo de tentativas de envio atingido.');
-        }
+        const sendMessageWithRetry = async () => {
+          while (retries < maxRetries) {
+              try {
+                  await sendRequest();
+                  console.log('Mensagem enviada com sucesso.');
+                  return;
+              } catch (error) {
+                  retries++;
+                  console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                  await new Promise(resolve => setTimeout(resolve, delay));
+                  delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+              }
+          }
+          console.error('Erro: Número máximo de tentativas de envio atingido.');
+          process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
+      };
+      
+      sendMessageWithRetry();
       } 
     }
     const input = response.data.input
@@ -1367,7 +1347,7 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
         //console.log(arrayoptions)
           // await msg.reply(new Poll('Winter or Summer?', [arrayoptions]));
           // formattedText = formattedText.replace(/\n$/, '');
-          await client.sendMessage(datafrom, new Poll('*Escolha uma resposta:*', arrayoptions));
+          await sendMessage(datafrom, new Poll('*Escolha uma resposta:*', arrayoptions));
         }
     }
   }
@@ -1786,9 +1766,9 @@ async function processGroupMessages(groupID, isFirstRun = true) {
 async function sendRequest(groupID, content, type) {
   let retries = 0;
   const maxRetries = 15;
-  let delay = init_delay;
+  let delay = init_delay; // Garanta que init_delay esteja definido corretamente
 
-  const sendMessage = async () => {
+  while (retries < maxRetries) {
       try {
           const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
               method: 'POST',
@@ -1797,7 +1777,7 @@ async function sendRequest(groupID, content, type) {
                   destinatario: groupID,
                   mensagem: content,
                   tipo: type,
-                  token: token
+                  token: token // Garanta que token esteja definido corretamente
               })
           });
 
@@ -1805,37 +1785,26 @@ async function sendRequest(groupID, content, type) {
               throw new Error(`Request failed with status ${response.status}`);
           }
 
-          return await response.json();
+          await response.json(); // Considerando processamento adicional se necessário
+          console.log('Mensagem enviada com sucesso.');
+          return; // Saída bem-sucedida do loop e função
       } catch (error) {
-          if (retries < maxRetries) {
-              retries++;
-              console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
-              await new Promise(resolve => setTimeout(resolve, delay));
-              delay *= 2;
-          } else {
-              throw error;
-          }
-      }
-  };
-
-  while (retries < maxRetries) {
-      try {
-          await sendMessage();
-          break;
-      } catch (error) {
-          if (retries === maxRetries) {
-              console.error('Erro: Número máximo de tentativas de envio atingido.');
-          }
+          retries++;
+          console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error.message}. Tentando novamente em ${delay}ms.`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
       }
   }
+
+  console.error('Erro: Número máximo de tentativas de envio atingido.');
 }
 
 async function sendMediaRequest(groupID, media, type) {
   let retries = 0;
   const maxRetries = 15;
-  let delay = init_delay;
+  let delay = init_delay; // Garanta que init_delay esteja definido corretamente
 
-  const sendMedia = async () => {
+  while (retries < maxRetries) {
       try {
           const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
               method: 'POST',
@@ -1844,7 +1813,7 @@ async function sendMediaRequest(groupID, media, type) {
                   destinatario: groupID,
                   media: media, // Aqui, 'media' é o objeto com mimetype, data e filename
                   tipo: type,
-                  token: token
+                  token: token // Garanta que token esteja definido corretamente
               })
           });
 
@@ -1852,29 +1821,18 @@ async function sendMediaRequest(groupID, media, type) {
               throw new Error(`Request failed with status ${response.status}`);
           }
 
-          return await response.json();
+          await response.json(); // Considerando processamento adicional se necessário
+          console.log('Mídia enviada com sucesso.');
+          return; // Saída bem-sucedida do loop e função
       } catch (error) {
-          if (retries < maxRetries) {
-              retries++;
-              console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
-              await new Promise(resolve => setTimeout(resolve, delay));
-              delay *= 2;
-          } else {
-              throw error;
-          }
-      }
-  };
-
-  while (retries < maxRetries) {
-      try {
-          await sendMedia();
-          break;
-      } catch (error) {
-          if (retries === maxRetries) {
-              console.error('Erro: Número máximo de tentativas de envio atingido.');
-          }
+          retries++;
+          console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error.message}. Tentando novamente em ${delay}ms.`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
       }
   }
+
+  console.error('Erro: Número máximo de tentativas de envio atingido.');
 }
 
 async function getBase64Data(fileUrl) {
@@ -2008,26 +1966,24 @@ async function createSessionJohnny(data, url_registro, fluxo) {
               return await response.json();
           };
       
-          while (retries < maxRetries) {
-              try {
-                  await sendRequest();
-                  restartAPI = false; // Reinicializa o flag quando a requisição é bem-sucedida
-                  break; // Sai do loop se a requisição for bem-sucedida
-              } catch (error) {
-                  retries++;
-                  console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
-                  if (!restartAPI) {
-                      myEmitter.emit('errorEvent', error);
-                      restartAPI = true;
-                  }
-                  await new Promise(resolve => setTimeout(resolve, delay));
-                  delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
-              }
-          }
-      
-          if (retries === maxRetries) {
-              console.error('Erro: Número máximo de tentativas de envio atingido.');
-          }
+          const sendMessageWithRetry = async () => {
+            while (retries < maxRetries) {
+                try {
+                    await sendRequest();
+                    console.log('Mensagem enviada com sucesso.');
+                    return;
+                } catch (error) {
+                    retries++;
+                    console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                }
+            }
+            console.error('Erro: Número máximo de tentativas de envio atingido.');
+            process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
+        };
+        
+        sendMessageWithRetry();
       }      
       }
       if (message.type === 'image') {
@@ -2057,26 +2013,24 @@ async function createSessionJohnny(data, url_registro, fluxo) {
             return await response.json();
         };
     
-        while (retries < maxRetries) {
-            try {
-                await sendRequest();
-                restartAPI = false; // Reinicializa o flag quando a requisição é bem-sucedida
-                break; // Sai do loop se a requisição for bem-sucedida
-            } catch (error) {
-                retries++;
-                console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
-                if (!restartAPI) {
-                    myEmitter.emit('errorEvent', error);
-                    restartAPI = true;
-                }
-                await new Promise(resolve => setTimeout(resolve, delay));
-                delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
-            }
-        }
-    
-        if (retries === maxRetries) {
-            console.error('Erro: Número máximo de tentativas de envio atingido.');
-        }
+        const sendMessageWithRetry = async () => {
+          while (retries < maxRetries) {
+              try {
+                  await sendRequest();
+                  console.log('Mensagem enviada com sucesso.');
+                  return;
+              } catch (error) {
+                  retries++;
+                  console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                  await new Promise(resolve => setTimeout(resolve, delay));
+                  delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+              }
+          }
+          console.error('Erro: Número máximo de tentativas de envio atingido.');
+          process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
+      };
+      
+      sendMessageWithRetry();
       }                          
       if (message.type === 'video') {
         let retries = 0;
@@ -2105,26 +2059,24 @@ async function createSessionJohnny(data, url_registro, fluxo) {
             return await response.json();
         };
     
-        while (retries < maxRetries) {
-            try {
-                await sendRequest();
-                restartAPI = false; // Reinicializa o flag quando a requisição é bem-sucedida
-                break; // Sai do loop se a requisição for bem-sucedida
-            } catch (error) {
-                retries++;
-                console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
-                if (!restartAPI) {
-                    myEmitter.emit('errorEvent', error);
-                    restartAPI = true;
-                }
-                await new Promise(resolve => setTimeout(resolve, delay));
-                delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
-            }
-        }
-    
-        if (retries === maxRetries) {
-            console.error('Erro: Número máximo de tentativas de envio atingido.');
-        }
+        const sendMessageWithRetry = async () => {
+          while (retries < maxRetries) {
+              try {
+                  await sendRequest();
+                  console.log('Mensagem enviada com sucesso.');
+                  return;
+              } catch (error) {
+                  retries++;
+                  console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                  await new Promise(resolve => setTimeout(resolve, delay));
+                  delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+              }
+          }
+          console.error('Erro: Número máximo de tentativas de envio atingido.');
+          process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
+      };
+      
+      sendMessageWithRetry();
       }                            
       if (message.type === 'audio') {
         let retries = 0;
@@ -2154,26 +2106,24 @@ async function createSessionJohnny(data, url_registro, fluxo) {
             return await response.json();
         };
     
-        while (retries < maxRetries) {
-            try {
-                await sendRequest();
-                restartAPI = false; // Reinicializa o flag quando a requisição é bem-sucedida
-                break; // Sai do loop se a requisição for bem-sucedida
-            } catch (error) {
-                retries++;
-                console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
-                if (!restartAPI) {
-                    myEmitter.emit('errorEvent', error);
-                    restartAPI = true;
-                }
-                await new Promise(resolve => setTimeout(resolve, delay));
-                delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
-            }
-        }
-    
-        if (retries === maxRetries) {
-            console.error('Erro: Número máximo de tentativas de envio atingido.');
-        }
+        const sendMessageWithRetry = async () => {
+          while (retries < maxRetries) {
+              try {
+                  await sendRequest();
+                  console.log('Mensagem enviada com sucesso.');
+                  return;
+              } catch (error) {
+                  retries++;
+                  console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                  await new Promise(resolve => setTimeout(resolve, delay));
+                  delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+              }
+          }
+          console.error('Erro: Número máximo de tentativas de envio atingido.');
+          process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
+      };
+      
+      sendMessageWithRetry();
       } 
     }
     const input = response.data.input
@@ -2189,7 +2139,7 @@ async function createSessionJohnny(data, url_registro, fluxo) {
         //console.log(arrayoptions)
           // await msg.reply(new Poll('Winter or Summer?', [arrayoptions]));
           // formattedText = formattedText.replace(/\n$/, '');
-          await client.sendMessage(data.from, new Poll('*Escolha uma resposta:*', arrayoptions));
+          await sendMessage(data.from, new Poll('*Escolha uma resposta:*', arrayoptions));
         }
     }
     if (!existsDB(data.from) && reinit === false) {
@@ -2262,26 +2212,10 @@ initializeDBTypebotV5();
 client.on("disconnected", async (reason) => {
   try {
       console.info(`Disconnected session: ${session}, reason: ${reason}`);
-
-      // Reinicia a sessão do WhatsApp após um curto atraso
-      setTimeout(() => startWhatsAppSession(session), 2000);
   } catch (err) {
       console.error(`Error handling disconnection for session ${session}: ${err}`);
   }
 });
-
-function startWhatsAppSession(sessionName) {
-  // Executar o comando para reiniciar o processo específico
-  exec(`pm2 restart ${sessionName}`, (err, stdout, stderr) => {
-      if (err) {
-          console.error(`Erro ao tentar reiniciar a sessão ${sessionName}:`, err);
-          return;
-      }
-      console.log(`Saída do comando de reinicialização para ${sessionName}:`, stdout);
-  });
-}
-
-// Funções auxiliares como updateSessionStatus, clearSessionData e startWhatsAppSession devem estar definidas.
 
 // Evento de recebimento de mensagens
 client.on('message', async msg => {
@@ -2413,26 +2347,24 @@ client.on('message', async msg => {
                     return await response.json();
                 };
             
-                while (retries < maxRetries) {
-                    try {
-                        await sendRequest();
-                        restartAPI = false; // Reinicializa o flag quando a requisição é bem-sucedida
-                        break; // Sai do loop se a requisição for bem-sucedida
-                    } catch (error) {
-                        retries++;
-                        console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
-                        if (!restartAPI) {
-                            myEmitter.emit('errorEvent', error);
-                            restartAPI = true;
-                        }
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
-                    }
-                }
-            
-                if (retries === maxRetries) {
-                    console.error('Erro: Número máximo de tentativas de envio atingido.');
-                }
+                const sendMessageWithRetry = async () => {
+                  while (retries < maxRetries) {
+                      try {
+                          await sendRequest();
+                          console.log('Mensagem enviada com sucesso.');
+                          return;
+                      } catch (error) {
+                          retries++;
+                          console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                          await new Promise(resolve => setTimeout(resolve, delay));
+                          delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                      }
+                  }
+                  console.error('Erro: Número máximo de tentativas de envio atingido.');
+                  process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
+              };
+              
+              sendMessageWithRetry();
             }                               
             }
             if (message.type === 'image') {
@@ -2462,26 +2394,24 @@ client.on('message', async msg => {
                   return await response.json();
               };
           
-              while (retries < maxRetries) {
-                  try {
-                      await sendRequest();
-                      restartAPI = false; // Reinicializa o flag quando a requisição é bem-sucedida
-                      break; // Sai do loop se a requisição for bem-sucedida
-                  } catch (error) {
-                      retries++;
-                      console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
-                      if (!restartAPI) {
-                          myEmitter.emit('errorEvent', error);
-                          restartAPI = true;
-                      }
-                      await new Promise(resolve => setTimeout(resolve, delay));
-                      delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
-                  }
-              }
-          
-              if (retries === maxRetries) {
-                  console.error('Erro: Número máximo de tentativas de envio atingido.');
-              }
+              const sendMessageWithRetry = async () => {
+                while (retries < maxRetries) {
+                    try {
+                        await sendRequest();
+                        console.log('Mensagem enviada com sucesso.');
+                        return;
+                    } catch (error) {
+                        retries++;
+                        console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                    }
+                }
+                console.error('Erro: Número máximo de tentativas de envio atingido.');
+                process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
+            };
+            
+            sendMessageWithRetry();
             }                          
             if (message.type === 'video') {
               let retries = 0;
@@ -2510,26 +2440,24 @@ client.on('message', async msg => {
                   return await response.json();
               };
           
-              while (retries < maxRetries) {
-                  try {
-                      await sendRequest();
-                      restartAPI = false; // Reinicializa o flag quando a requisição é bem-sucedida
-                      break; // Sai do loop se a requisição for bem-sucedida
-                  } catch (error) {
-                      retries++;
-                      console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
-                      if (!restartAPI) {
-                          myEmitter.emit('errorEvent', error);
-                          restartAPI = true;
-                      }
-                      await new Promise(resolve => setTimeout(resolve, delay));
-                      delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
-                  }
-              }
-          
-              if (retries === maxRetries) {
-                  console.error('Erro: Número máximo de tentativas de envio atingido.');
-              }
+              const sendMessageWithRetry = async () => {
+                while (retries < maxRetries) {
+                    try {
+                        await sendRequest();
+                        console.log('Mensagem enviada com sucesso.');
+                        return;
+                    } catch (error) {
+                        retries++;
+                        console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                    }
+                }
+                console.error('Erro: Número máximo de tentativas de envio atingido.');
+                process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
+            };
+            
+            sendMessageWithRetry();
             }                            
             if (message.type === 'audio') {
               let retries = 0;
@@ -2559,26 +2487,24 @@ client.on('message', async msg => {
                   return await response.json();
               };
           
-              while (retries < maxRetries) {
-                  try {
-                      await sendRequest();
-                      restartAPI = false; // Reinicializa o flag quando a requisição é bem-sucedida
-                      break; // Sai do loop se a requisição for bem-sucedida
-                  } catch (error) {
-                      retries++;
-                      console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
-                      if (!restartAPI) {
-                          myEmitter.emit('errorEvent', error);
-                          restartAPI = true;
-                      }
-                      await new Promise(resolve => setTimeout(resolve, delay));
-                      delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
-                  }
-              }
-          
-              if (retries === maxRetries) {
-                  console.error('Erro: Número máximo de tentativas de envio atingido.');
-              }
+              const sendMessageWithRetry = async () => {
+                while (retries < maxRetries) {
+                    try {
+                        await sendRequest();
+                        console.log('Mensagem enviada com sucesso.');
+                        return;
+                    } catch (error) {
+                        retries++;
+                        console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                    }
+                }
+                console.error('Erro: Número máximo de tentativas de envio atingido.');
+                process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
+            };
+            
+            sendMessageWithRetry();
             }                           
           }
           const input = response.data.input
@@ -2594,7 +2520,7 @@ client.on('message', async msg => {
         //console.log(arrayoptions)
           // await msg.reply(new Poll('Winter or Summer?', [arrayoptions]));
           // formattedText = formattedText.replace(/\n$/, '');
-          await client.sendMessage(msg.from, new Poll('*Escolha uma resposta:*', arrayoptions));
+          await sendMessage(msg.from, new Poll('*Escolha uma resposta:*', arrayoptions));
         }
     }
           updateInteract(msg.from, 'done');
@@ -3195,7 +3121,7 @@ _Resete o processo a qualquer momento digitando "00"_
         if (fs.existsSync(`./${nomeArquivo}`)) {                
           const arquivoMedia = MessageMedia.fromFilePath(`./${nomeArquivo}`);
           //await client.sendMessage(msg.from, MessageMedia.fromFilePath(`./${nomeArquivo}.json`));
-          await client.sendMessage(msg.from, arquivoMedia);
+          await sendMessage(msg.from, arquivoMedia);
           break; // Encerra o loop após enviar o arquivo
         }
         // Aguarda 1 segundo antes de verificar novamente
@@ -3423,26 +3349,24 @@ if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) 
             return await response.json();
         };
     
-        while (retries < maxRetries) {
-            try {
-                await sendRequest();
-                restartAPI = false; // Reinicializa o flag quando a requisição é bem-sucedida
-                break; // Sai do loop se a requisição for bem-sucedida
-            } catch (error) {
-                retries++;
-                console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
-                if (!restartAPI) {
-                    myEmitter.emit('errorEvent', error);
-                    restartAPI = true;
-                }
-                await new Promise(resolve => setTimeout(resolve, delay));
-                delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
-            }
-        }
-    
-        if (retries === maxRetries) {
-            console.error('Erro: Número máximo de tentativas de envio atingido.');
-        }
+        const sendMessageWithRetry = async () => {
+          while (retries < maxRetries) {
+              try {
+                  await sendRequest();
+                  console.log('Mensagem enviada com sucesso.');
+                  return;
+              } catch (error) {
+                  retries++;
+                  console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                  await new Promise(resolve => setTimeout(resolve, delay));
+                  delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+              }
+          }
+          console.error('Erro: Número máximo de tentativas de envio atingido.');
+          process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
+      };
+      
+      sendMessageWithRetry();
     }                               
     }
     if (message.type === 'image') {
@@ -3472,26 +3396,24 @@ if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) 
           return await response.json();
       };
   
-      while (retries < maxRetries) {
-          try {
-              await sendRequest();
-              restartAPI = false; // Reinicializa o flag quando a requisição é bem-sucedida
-              break; // Sai do loop se a requisição for bem-sucedida
-          } catch (error) {
-              retries++;
-              console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
-              if (!restartAPI) {
-                  myEmitter.emit('errorEvent', error);
-                  restartAPI = true;
-              }
-              await new Promise(resolve => setTimeout(resolve, delay));
-              delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
-          }
-      }
-  
-      if (retries === maxRetries) {
-          console.error('Erro: Número máximo de tentativas de envio atingido.');
-      }
+      const sendMessageWithRetry = async () => {
+        while (retries < maxRetries) {
+            try {
+                await sendRequest();
+                console.log('Mensagem enviada com sucesso.');
+                return;
+            } catch (error) {
+                retries++;
+                console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+            }
+        }
+        console.error('Erro: Número máximo de tentativas de envio atingido.');
+        process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
+    };
+    
+    sendMessageWithRetry();
     }                          
     if (message.type === 'video') {
       let retries = 0;
@@ -3520,26 +3442,24 @@ if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) 
           return await response.json();
       };
   
-      while (retries < maxRetries) {
-          try {
-              await sendRequest();
-              restartAPI = false; // Reinicializa o flag quando a requisição é bem-sucedida
-              break; // Sai do loop se a requisição for bem-sucedida
-          } catch (error) {
-              retries++;
-              console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
-              if (!restartAPI) {
-                  myEmitter.emit('errorEvent', error);
-                  restartAPI = true;
-              }
-              await new Promise(resolve => setTimeout(resolve, delay));
-              delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
-          }
-      }
-  
-      if (retries === maxRetries) {
-          console.error('Erro: Número máximo de tentativas de envio atingido.');
-      }
+      const sendMessageWithRetry = async () => {
+        while (retries < maxRetries) {
+            try {
+                await sendRequest();
+                console.log('Mensagem enviada com sucesso.');
+                return;
+            } catch (error) {
+                retries++;
+                console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+            }
+        }
+        console.error('Erro: Número máximo de tentativas de envio atingido.');
+        process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
+    };
+    
+    sendMessageWithRetry();
     }                            
     if (message.type === 'audio') {
       let retries = 0;
@@ -3568,26 +3488,24 @@ if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) 
           return await response.json();
       };
   
-      while (retries < maxRetries) {
-          try {
-              await sendRequest();
-              restartAPI = false; // Reinicializa o flag quando a requisição é bem-sucedida
-              break; // Sai do loop se a requisição for bem-sucedida
-          } catch (error) {
-              retries++;
-              console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
-              if (!restartAPI) {
-                  myEmitter.emit('errorEvent', error);
-                  restartAPI = true;
-              }
-              await new Promise(resolve => setTimeout(resolve, delay));
-              delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
-          }
-      }
-  
-      if (retries === maxRetries) {
-          console.error('Erro: Número máximo de tentativas de envio atingido.');
-      }
+      const sendMessageWithRetry = async () => {
+        while (retries < maxRetries) {
+            try {
+                await sendRequest();
+                console.log('Mensagem enviada com sucesso.');
+                return;
+            } catch (error) {
+                retries++;
+                console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+            }
+        }
+        console.error('Erro: Número máximo de tentativas de envio atingido.');
+        process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
+    };
+    
+    sendMessageWithRetry();
     }                           
   }
   const input = response.data.input
@@ -3601,7 +3519,7 @@ if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) 
           arrayoptions.push(item.content);
         }
         //console.log(arrayoptions)          
-          await client.sendMessage(vote.voter, new Poll('Escolha uma opção:', arrayoptions));
+          await sendMessage(vote.voter, new Poll('Escolha uma opção:', arrayoptions));
         }
   }
   //console.log(vote)

@@ -90,6 +90,16 @@ initializeDBTypebotV2();
     }
   });
 
+  async function sendMessageWithRetry(phoneNumber, messageToSend) {
+    try {
+        await client.sendMessage(phoneNumber, messageToSend);      
+    } catch (error) {
+        console.error(`Falha ao enviar mensagem para ${phoneNumber}: erro: ${error}`);
+        // Sinaliza ao PM2 para reiniciar o aplicativo devido a um erro crítico
+        process.exit(1);
+    }
+  }
+
   const appQR = express();
   const serverQR = http.createServer(appQR);
   const io = socketIo(serverQR);
@@ -188,31 +198,31 @@ app.post('/sendMessage', async (req, res) => {
                 if (!mensagem) {
                     return res.status(400).json({ status: 'falha', mensagem: 'É preciso fornecer uma mensagem' });
                 }
-                await client.sendMessage(chatId, mensagem);
+                await sendMessageWithRetry(chatId, mensagem);
                 break;
             case 'image':
                 if (!media) {
                     return res.status(400).json({ status: 'falha', mensagem: 'É preciso fornecer uma midia' });
                 }                
-                await client.sendMessage(chatId, new MessageMedia(media.mimetype, media.data, media.filename));
+                await sendMessageWithRetry(chatId, new MessageMedia(media.mimetype, media.data, media.filename));
                 break;
             case 'video':
                 if (!media) {
                     return res.status(400).json({ status: 'falha', mensagem: 'É preciso fornecer uma midia' });
                 }
-                await client.sendMessage(chatId, new MessageMedia(media.mimetype, media.data, media.filename));
+                await sendMessageWithRetry(chatId, new MessageMedia(media.mimetype, media.data, media.filename));
                 break;
             case 'audio':
                 if (!media) {
                     return res.status(400).json({ status: 'falha', mensagem: 'É preciso fornecer uma midia' });
                 }
-                await client.sendMessage(chatId, new MessageMedia(media.mimetype, media.data, media.filename), {sendAudioAsVoice: true});
+                await sendMessageWithRetry(chatId, new MessageMedia(media.mimetype, media.data, media.filename), {sendAudioAsVoice: true});
                 break;
             case 'file':
                 if (!media) {
                     return res.status(400).json({ status: 'falha', mensagem: 'É preciso fornecer uma midia' });
                 }
-                await client.sendMessage(chatId, new MessageMedia(media.mimetype, media.data, media.filename));
+                await sendMessageWithRetry(chatId, new MessageMedia(media.mimetype, media.data, media.filename));
                 break;
             default:
                 return res.status(400).json({ status: 'falha', mensagem: 'Tipo de mensagem inválido' });
@@ -259,7 +269,7 @@ async function processAndSendMessageKiwify(event, idString) {
 
   // Se uma mensagem foi encontrada, envia-a para o número de telefone formatado
   if (messageToSend) {
-    //await client.sendMessage(phoneNumber, messageToSend);
+    //await sendMessageWithRetry(phoneNumber, messageToSend);
     console.log(`Enviando mensagem para ${phoneNumber}: "${messageToSend}"`);
   }
 }

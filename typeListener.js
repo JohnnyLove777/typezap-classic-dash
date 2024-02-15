@@ -1066,8 +1066,7 @@ function readJSONFileTypebotV2(filename) {
 function writeJSONFileTypebotV2(filename, data) {
     fs.writeFileSync(filename, JSON.stringify(data, null, 2));
 }
-
-let reinit = false;
+// teste reinit
 
 async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
   
@@ -1144,8 +1143,7 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
         }
         if (formattedText.startsWith('!reiniciar')) {
           if (existsDB(datafrom)) {
-            deleteObject(datafrom);
-            reinit = true;
+            deleteObject(datafrom);            
           }
         }
         if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar'))) {
@@ -1396,7 +1394,7 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
         processGroupMessages(datafrom, isFirstRun = true);
     }
   }
-    if (!existsDB(datafrom) && reinit === false) {
+    if (!existsDB(datafrom)) {
       addObject(datafrom, response.data.sessionId, datafrom.replace(/\D/g, ''), JSON.stringify(data.id.id), 'done', fluxo, false, "active", db_length);
     }
     if(existsDB(datafrom)){
@@ -1405,10 +1403,7 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
       updateInteract(datafrom, 'done');
       updateFlow(datafrom, "active");
       updateName(datafrom, fluxo);
-    }
-    if(reinit === true){
-      reinit = false;
-    }    
+    }      
   } catch (error) {
     console.log(error);
   }
@@ -1935,8 +1930,7 @@ async function createSessionJohnny(data, url_registro, fluxo) {
         }
         if (formattedText.startsWith('!reiniciar')) {
           if (existsDB(data.from)) {
-            deleteObject(data.from);
-            reinit = true;
+            deleteObject(data.from);           
           }
         }
         if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar'))) {
@@ -2142,12 +2136,10 @@ async function createSessionJohnny(data, url_registro, fluxo) {
           await sendMessage(data.from, new Poll('*Escolha uma resposta:*', arrayoptions));
         }
     }
-    if (!existsDB(data.from) && reinit === false) {
+    if (!existsDB(data.from)) {
       addObject(data.from, response.data.sessionId, data.from.replace(/\D/g, ''), JSON.stringify(data.id.id), 'done', fluxo, false, "active", db_length);
     }
-    if(reinit === true){
-      reinit = false;
-    }
+    
   } catch (error) {
     console.log(error);
   }

@@ -1786,7 +1786,7 @@ async function sendRequest(groupID, content, type) {
           }
 
           await response.json(); // Considerando processamento adicional se necessário
-          console.log('Mensagem enviada com sucesso.');
+          //console.log('Mensagem enviada com sucesso.');
           return; // Saída bem-sucedida do loop e função
       } catch (error) {
           retries++;

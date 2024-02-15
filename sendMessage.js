@@ -225,10 +225,67 @@ app.post('/sendMessage', async (req, res) => {
     }
 });
 
+// Método Kiwify
+
+// Função para tratar o número de telefone
+function formatPhoneNumberKiwify(phone) {
+  // Remove caracteres não numéricos e adiciona o código do país se necessário
+  let formattedPhone = phone.replace(/\D/g, '');
+  if (!formattedPhone.startsWith('55')) {
+    formattedPhone = '55' + formattedPhone;
+  }
+  return `${formattedPhone}@c.us`;
+}
+
+// Função generalizada para processar eventos e enviar mensagens
+async function processAndSendMessageKiwify(event, idString) {
+  // Determina o número de telefone com base no tipo de evento
+  const phoneNumber = event.checkout_link ? formatPhoneNumberKiwify(event.phone) : formatPhoneNumberKiwify(event.Customer.mobile);
+  
+  // Busca todas as mensagens na base de dados
+  const dbMessages = listAllFromDBTypebotV2();
+  
+  // Inicializa a variável para armazenar a mensagem a ser enviada
+  let messageToSend = '';
+  
+  // Percorre as mensagens para encontrar uma que corresponda ao idString
+  for (let key in dbMessages) {
+    if (dbMessages[key].gatilho.startsWith(idString)) {
+      // Extrai a parte da mensagem que vem após o idString
+      messageToSend = dbMessages[key].gatilho.replace(idString, '');
+      break; // Encerra a busca assim que encontra a primeira correspondência
+    }
+  }
+
+  // Se uma mensagem foi encontrada, envia-a para o número de telefone formatado
+  if (messageToSend) {
+    //await client.sendMessage(phoneNumber, messageToSend);
+    console.log(`Enviando mensagem para ${phoneNumber}: "${messageToSend}"`);
+  }
+}
+
 // Função principal para processar o evento recebido
 function processEventKiwify(event) {
   if ('order_id' in event) {
-    processOrderEventKiwify(event);
+    switch (event.order_status) {
+      case 'paid':        
+        processAndSendMessageKiwify(event, 'KiwifyAprovada: ');
+        break;
+        case 'waiting_payment':
+        processAndSendMessageKiwify(event, 'KiwifyAguardando: ');
+        break;
+        case 'refused':
+        processAndSendMessageKiwify(event, 'KiwifyRecusado: ');
+        break;
+        case 'refunded':
+        processAndSendMessageKiwify(event, 'KiwifyReembolsado: ');
+        break;
+        case 'chargedback':
+        processAndSendMessageKiwify(event, 'KiwifyChargedBack: ');
+        break;
+        default:
+        console.log('Status de pedido desconhecido:', event.order_status);
+    }
   } else if ('checkout_link' in event) {
     processAbandonedCheckoutEventKiwify(event);
   } else {
@@ -236,32 +293,9 @@ function processEventKiwify(event) {
   }
 }
 
-// Manipulador para eventos relacionados a pedidos
-function processOrderEventKiwify(event) {
-  switch (event.order_status) {
-    case 'paid':
-      console.log("Processamento para pedidos pagos");
-      break;
-    case 'waiting_payment':
-      console.log("Processamento para pedidos aguardando pagamento");
-      break;
-    case 'refused':
-      console.log("Processamento para pedidos recusados");
-      break;
-    case 'refunded':
-      console.log("Processamento para pedidos reembolsados");
-      break;
-    case 'chargedback':
-      console.log("Processamento para casos de chargeback");
-      break;
-    default:
-      console.log('Status de pedido desconhecido:', event.order_status);
-  }
-}
-
 // Manipulador para evento de carrinho abandonado
 function processAbandonedCheckoutEventKiwify(event) {
-  console.log("Processamento específico para carrinho abandonado");
+  processAndSendMessageKiwify(event, 'KiwifyAbandono: ');
 }
 
 // Exemplo de como usar a função processEvent
@@ -276,6 +310,7 @@ app.post('/kiwify', (req, res) => {
   res.status(200).send({ status: 'ok' });
 });
 
+// Fim dos Métodos Kiwify
 
 server.listen(port, () => {
     console.log(`Servidor sendMessage rodando em http://localhost:${port}`);

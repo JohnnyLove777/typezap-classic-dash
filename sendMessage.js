@@ -19,7 +19,7 @@ const sessao = "sendMessage";
 const app = express();
 const server = http.createServer(app);
 
-const port = 3000;
+const port = 8888;
 
 app.use(cors());
 app.use(express.static('public'));

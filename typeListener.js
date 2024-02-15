@@ -40,6 +40,7 @@ const token = "a9387747d4069f22fca5903858cdda24";
 const init_delay = 60000; // Exponential Backoff delay
 const db_length = 600; // Tamanho do banco de dados
 const sessao = "typeListener";
+const portSend = 8888;
 
 /*const client = new Client({
     authStrategy: new LocalAuth({ clientId: sessao }),
@@ -1166,7 +1167,7 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
           
       
           const sendRequest = async () => {              
-              const response = await fetch('http://localhost:3000/sendMessage', {
+              const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
@@ -1215,7 +1216,7 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
     
         const sendRequest = async () => {
             const media = await tratarMidia(message);
-            const response = await fetch('http://localhost:3000/sendMessage', {
+            const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -1263,7 +1264,7 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
     
         const sendRequest = async () => {
             const media = await tratarMidia(message);
-            const response = await fetch('http://localhost:3000/sendMessage', {
+            const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -1312,7 +1313,7 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
         const sendRequest = async () => {
             const media = await tratarMidia(message);
             
-            const response = await fetch('http://localhost:3000/sendMessage', {
+            const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -1789,7 +1790,7 @@ async function sendRequest(groupID, content, type) {
 
   const sendMessage = async () => {
       try {
-          const response = await fetch('http://localhost:3000/sendMessage', {
+          const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -1836,7 +1837,7 @@ async function sendMediaRequest(groupID, media, type) {
 
   const sendMedia = async () => {
       try {
-          const response = await fetch('http://localhost:3000/sendMessage', {
+          const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -1988,7 +1989,7 @@ async function createSessionJohnny(data, url_registro, fluxo) {
       
           const sendRequest = async () => {
               await chat.sendStateTyping(); // Simulando Digitação
-              const response = await fetch('http://localhost:3000/sendMessage', {
+              const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
@@ -2037,7 +2038,7 @@ async function createSessionJohnny(data, url_registro, fluxo) {
     
         const sendRequest = async () => {
             const media = await tratarMidia(message);
-            const response = await fetch('http://localhost:3000/sendMessage', {
+            const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -2085,7 +2086,7 @@ async function createSessionJohnny(data, url_registro, fluxo) {
     
         const sendRequest = async () => {
             const media = await tratarMidia(message);
-            const response = await fetch('http://localhost:3000/sendMessage', {
+            const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -2134,7 +2135,7 @@ async function createSessionJohnny(data, url_registro, fluxo) {
         const sendRequest = async () => {
             const media = await tratarMidia(message);
             await chat.sendStateRecording(); // Simulando áudio gravando
-            const response = await fetch('http://localhost:3000/sendMessage', {
+            const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -2393,7 +2394,7 @@ client.on('message', async msg => {
             
                 const sendRequest = async () => {
                     await chat.sendStateTyping(); // Simulando Digitação
-                    const response = await fetch('http://localhost:3000/sendMessage', {
+                    const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -2442,7 +2443,7 @@ client.on('message', async msg => {
           
               const sendRequest = async () => {
                   const media = await tratarMidia(message);
-                  const response = await fetch('http://localhost:3000/sendMessage', {
+                  const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({
@@ -2490,7 +2491,7 @@ client.on('message', async msg => {
           
               const sendRequest = async () => {
                   const media = await tratarMidia(message);
-                  const response = await fetch('http://localhost:3000/sendMessage', {
+                  const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({
@@ -2539,7 +2540,7 @@ client.on('message', async msg => {
               const sendRequest = async () => {
                   const media = await tratarMidia(message);
                   await chat.sendStateRecording(); // Simulando áudio gravando
-                  const response = await fetch('http://localhost:3000/sendMessage', {
+                  const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({
@@ -3403,7 +3404,7 @@ if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) 
         let delay = init_delay; // Tempo inicial de espera em milissegundos                           
     
         const sendRequest = async () => {
-            const response = await fetch('http://localhost:3000/sendMessage', {
+            const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -3452,7 +3453,7 @@ if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) 
   
       const sendRequest = async () => {
           const media = await tratarMidia(message);
-          const response = await fetch('http://localhost:3000/sendMessage', {
+          const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -3500,7 +3501,7 @@ if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) 
   
       const sendRequest = async () => {
           const media = await tratarMidia(message);
-          const response = await fetch('http://localhost:3000/sendMessage', {
+          const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -3548,7 +3549,7 @@ if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) 
   
       const sendRequest = async () => {
           const media = await tratarMidia(message);
-          const response = await fetch('http://localhost:3000/sendMessage', {
+          const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({

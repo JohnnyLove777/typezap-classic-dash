@@ -225,14 +225,57 @@ app.post('/sendMessage', async (req, res) => {
     }
 });
 
-// Endpoint /kiwify para receber eventos
-app.post('/kiwify', (req, res) => {
-  // Imprime o corpo da requisição no console
-  console.log('Evento recebido em /kiwify:', req.body);
+// Função principal para processar o evento recebido
+function processEventKiwify(event) {
+  if ('order_id' in event) {
+    processOrderEventKiwify(event);
+  } else if ('checkout_link' in event) {
+    processAbandonedCheckoutEventKiwify(event);
+  } else {
+    console.log('Tipo de evento desconhecido', event);
+  }
+}
 
-  // Responde com sucesso assim que receber o evento
+// Manipulador para eventos relacionados a pedidos
+function processOrderEventKiwify(event) {
+  switch (event.order_status) {
+    case 'paid':
+      console.log("Processamento para pedidos pagos");
+      break;
+    case 'waiting_payment':
+      console.log("Processamento para pedidos aguardando pagamento");
+      break;
+    case 'refused':
+      console.log("Processamento para pedidos recusados");
+      break;
+    case 'refunded':
+      console.log("Processamento para pedidos reembolsados");
+      break;
+    case 'chargedback':
+      console.log("Processamento para casos de chargeback");
+      break;
+    default:
+      console.log('Status de pedido desconhecido:', event.order_status);
+  }
+}
+
+// Manipulador para evento de carrinho abandonado
+function processAbandonedCheckoutEventKiwify(event) {
+  console.log("Processamento específico para carrinho abandonado");
+}
+
+// Exemplo de como usar a função processEvent
+app.post('/kiwify', (req, res) => {
+  const event = req.body;
+  //console.log('Evento recebido em /kiwify:', event);
+
+  // Processa o evento com base no seu tipo
+  processEventKiwify(event);
+
+  // Responde com sucesso
   res.status(200).send({ status: 'ok' });
 });
+
 
 server.listen(port, () => {
     console.log(`Servidor sendMessage rodando em http://localhost:${port}`);

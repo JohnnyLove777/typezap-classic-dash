@@ -1178,7 +1178,7 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
             while (retries < maxRetries) {
                 try {
                     await sendRequest();
-                    console.log('Mensagem enviada com sucesso.');
+                    //console.log('Mensagem enviada com sucesso.');
                     return;
                 } catch (error) {
                     retries++;
@@ -1225,7 +1225,7 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
           while (retries < maxRetries) {
               try {
                   await sendRequest();
-                  console.log('Mensagem enviada com sucesso.');
+                  //console.log('Mensagem enviada com sucesso.');
                   return;
               } catch (error) {
                   retries++;
@@ -1271,7 +1271,7 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
           while (retries < maxRetries) {
               try {
                   await sendRequest();
-                  console.log('Mensagem enviada com sucesso.');
+                  //console.log('Mensagem enviada com sucesso.');
                   return;
               } catch (error) {
                   retries++;
@@ -1318,7 +1318,7 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
           while (retries < maxRetries) {
               try {
                   await sendRequest();
-                  console.log('Mensagem enviada com sucesso.');
+                  //console.log('Mensagem enviada com sucesso.');
                   return;
               } catch (error) {
                   retries++;
@@ -1970,7 +1970,7 @@ async function createSessionJohnny(data, url_registro, fluxo) {
             while (retries < maxRetries) {
                 try {
                     await sendRequest();
-                    console.log('Mensagem enviada com sucesso.');
+                    //console.log('Mensagem enviada com sucesso.');
                     return;
                 } catch (error) {
                     retries++;
@@ -2017,7 +2017,7 @@ async function createSessionJohnny(data, url_registro, fluxo) {
           while (retries < maxRetries) {
               try {
                   await sendRequest();
-                  console.log('Mensagem enviada com sucesso.');
+                  //console.log('Mensagem enviada com sucesso.');
                   return;
               } catch (error) {
                   retries++;
@@ -2063,7 +2063,7 @@ async function createSessionJohnny(data, url_registro, fluxo) {
           while (retries < maxRetries) {
               try {
                   await sendRequest();
-                  console.log('Mensagem enviada com sucesso.');
+                  //console.log('Mensagem enviada com sucesso.');
                   return;
               } catch (error) {
                   retries++;
@@ -2110,7 +2110,7 @@ async function createSessionJohnny(data, url_registro, fluxo) {
           while (retries < maxRetries) {
               try {
                   await sendRequest();
-                  console.log('Mensagem enviada com sucesso.');
+                  //console.log('Mensagem enviada com sucesso.');
                   return;
               } catch (error) {
                   retries++;
@@ -2351,7 +2351,7 @@ client.on('message', async msg => {
                   while (retries < maxRetries) {
                       try {
                           await sendRequest();
-                          console.log('Mensagem enviada com sucesso.');
+                          //console.log('Mensagem enviada com sucesso.');
                           return;
                       } catch (error) {
                           retries++;
@@ -2398,7 +2398,7 @@ client.on('message', async msg => {
                 while (retries < maxRetries) {
                     try {
                         await sendRequest();
-                        console.log('Mensagem enviada com sucesso.');
+                        //console.log('Mensagem enviada com sucesso.');
                         return;
                     } catch (error) {
                         retries++;
@@ -2444,7 +2444,7 @@ client.on('message', async msg => {
                 while (retries < maxRetries) {
                     try {
                         await sendRequest();
-                        console.log('Mensagem enviada com sucesso.');
+                        //console.log('Mensagem enviada com sucesso.');
                         return;
                     } catch (error) {
                         retries++;
@@ -2491,7 +2491,7 @@ client.on('message', async msg => {
                 while (retries < maxRetries) {
                     try {
                         await sendRequest();
-                        console.log('Mensagem enviada com sucesso.');
+                        //console.log('Mensagem enviada com sucesso.');
                         return;
                     } catch (error) {
                         retries++;
@@ -3353,7 +3353,7 @@ if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) 
           while (retries < maxRetries) {
               try {
                   await sendRequest();
-                  console.log('Mensagem enviada com sucesso.');
+                  //console.log('Mensagem enviada com sucesso.');
                   return;
               } catch (error) {
                   retries++;
@@ -3400,7 +3400,7 @@ if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) 
         while (retries < maxRetries) {
             try {
                 await sendRequest();
-                console.log('Mensagem enviada com sucesso.');
+                //console.log('Mensagem enviada com sucesso.');
                 return;
             } catch (error) {
                 retries++;
@@ -3446,7 +3446,7 @@ if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) 
         while (retries < maxRetries) {
             try {
                 await sendRequest();
-                console.log('Mensagem enviada com sucesso.');
+                //console.log('Mensagem enviada com sucesso.');
                 return;
             } catch (error) {
                 retries++;
@@ -3492,7 +3492,7 @@ if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) 
         while (retries < maxRetries) {
             try {
                 await sendRequest();
-                console.log('Mensagem enviada com sucesso.');
+                //console.log('Mensagem enviada com sucesso.');
                 return;
             } catch (error) {
                 retries++;

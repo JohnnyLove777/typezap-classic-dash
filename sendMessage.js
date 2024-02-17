@@ -365,37 +365,41 @@ async function processAndSendMessageKiwify(event, idString) {
   // Determina o número de telefone com base no tipo de evento
   const phoneNumber = event.checkout_link ? formatPhoneNumberKiwify(event.phone) : formatPhoneNumberKiwify(event.Customer.mobile);
 
-  // Adiciona ou atualiza o webhook no banco de dados
+  // Assume a existência de uma função formatPhoneNumberKiwify para tratar o número de telefone
   const numeroId = phoneNumber; // Usando o número de telefone como ID único
   const plataforma = "kiwify";
-  let status = event.checkout_link ? "abandoned" : "paid"; // Assume que checkout_link indica carrinho abandonado
+  
+  // Determina o status com base no contexto do evento
+  let status;
+  if (event.checkout_link) {
+    status = "abandoned";
+  } else {
+    status = event.order_status; // Utiliza o status do pedido diretamente
+  }
 
-  // Verifica se já existe um registro para este númeroId com status "paid" para evitar disparo de carrinho abandonado
+  // Verifica se já existe um registro para este númeroId com status "paid" para evitar ações redundantes
   const webhooks = listAllWebhooks(); // Supõe a existência dessa função para listar todos os webhooks
-  if (webhooks[numeroId] && webhooks[numeroId].status === "paid") {
-    console.log(`Número ${numeroId} já possui status pago. Não dispara carrinho abandonado.`);
-    return; // Encerra a função se o status já for "paid"
+  if (webhooks[numeroId] && webhooks[numeroId].status === "paid" && status !== "paid") {
+    console.log(`Número ${numeroId} já possui status pago. Não dispara ação para status: ${status}.`);
+    return; // Encerra a função se o status já for "paid" e o evento atual não for de pagamento
   }
 
   // Adiciona ou atualiza o registro no banco de dados
   addOrUpdateWebhook(numeroId, plataforma, status);
 
-  // Procede com a busca e envio da mensagem se não for uma situação de carrinho pago
-  if (status === "abandoned") {
-    const dbMessages = listAllFromDBTypebotV2();
-
-    let messageToSend = '';
-    for (let key in dbMessages) {
-      if (dbMessages[key].gatilho.startsWith(idString)) {
-        messageToSend = dbMessages[key].gatilho.replace(idString, '');
-        break;
-      }
+  // Busca e envio da mensagem com base no idString e status do evento
+  const dbMessages = listAllFromDBTypebotV2();
+  let messageToSend = '';
+  for (let key in dbMessages) {
+    if (dbMessages[key].gatilho.startsWith(idString)) {
+      messageToSend = dbMessages[key].gatilho.replace(idString, '');
+      break;
     }
+  }
 
-    if (messageToSend) {
-      console.log(`Enviando mensagem para ${phoneNumber}: "${messageToSend}"`);
-      //await sendMessageWithRetry(phoneNumber, messageToSend);
-    }
+  if (messageToSend) {
+    console.log(`Enviando mensagem para ${phoneNumber}: "${messageToSend}"`);
+    // Aqui você chamaria a função de envio real, como: await sendMessageWithRetry(phoneNumber, messageToSend);
   }
 }
 

@@ -1099,6 +1099,10 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
     
     if(datafrom.endsWith('@c.us')){
     for (const message of messages){
+      if (!["text", "image", "audio", "video", "variable"].includes(message.type)) {
+        console.log(`Tipo '${message.type}' não permitido. Pulando registro com ID: ${message.id}`);
+        continue; // Pula para a próxima iteração do laço
+      }
       if (message.type === 'text') {
         let formattedText = '';
         for (const richText of message.content.richText) {
@@ -1106,8 +1110,13 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
             let text = '';
     
             if (element.text) {
-              text = element.text;
-            } else if (element.type === 'inline-variable') {              
+              text = element.text;            
+            } 
+            else if (element.type === 'variable') {
+              // Extrai o valor de 'children' assumindo que o primeiro item contém o texto desejado
+              text = element.children[0]?.text || 'valor_padrão_para_variável';
+            }
+            else if (element.type === 'inline-variable') {              
               text = element.children[0].children[0].text;
             }
     
@@ -1228,6 +1237,10 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
   }
   if (datafrom.endsWith('@g.us')) {
     for (const message of messages) {
+      if (!["text", "image", "audio", "video", "variable"].includes(message.type)) {
+        console.log(`Tipo '${message.type}' não permitido. Pulando registro com ID: ${message.id}`);
+        continue; // Pula para a próxima iteração do laço
+        }
         let messageObj = {};
 
         if (message.type === 'text') {
@@ -1238,10 +1251,14 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
           
                     if (element.text) {
                         text = element.text;
-                    } else if (element.type === 'inline-variable') {              
-                        text = element.children[0].children[0].text;
                     }
-          
+                    else if (element.type === 'variable') {
+                      // Extrai o valor de 'children' assumindo que o primeiro item contém o texto desejado
+                      text = element.children[0]?.text || 'valor_padrão_para_variável';
+                    }
+                    else if (element.type === 'inline-variable') {              
+                        text = element.children[0].children[0].text;
+                    }          
                     if (element.bold) {
                         text = `*${text}*`;
                     }
@@ -1800,6 +1817,10 @@ async function createSessionJohnny(data, url_registro, fluxo) {
     const messages = response.data.messages;
     
     for (const message of messages){
+      if (!["text", "image", "audio", "video", "variable"].includes(message.type)) {
+        console.log(`Tipo '${message.type}' não permitido. Pulando registro com ID: ${message.id}`);
+        continue; // Pula para a próxima iteração do laço
+      }
       
       if (message.type === 'text') {
         let formattedText = '';
@@ -1809,7 +1830,12 @@ async function createSessionJohnny(data, url_registro, fluxo) {
     
             if (element.text) {
               text = element.text;
-            } else if (element.type === 'inline-variable') {              
+            }
+            else if (element.type === 'variable') {
+              // Extrai o valor de 'children' assumindo que o primeiro item contém o texto desejado
+              text = element.children[0]?.text || 'valor_padrão_para_variável';
+            }
+            else if (element.type === 'inline-variable') {              
               text = element.children[0].children[0].text;
             }
     
@@ -1862,7 +1888,7 @@ async function createSessionJohnny(data, url_registro, fluxo) {
           
       
           const sendRequest = async () => {
-              await chat.sendStateTyping(); // Simulando Digitação
+              //await chat.sendStateTyping(); // Simulando Digitação
               const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
@@ -2058,6 +2084,10 @@ client.on('message', async msg => {
           const messages = response.data.messages;
           //console.log(JSON.stringify(messages));                  
           for (const message of messages){
+            if (!["text", "image", "audio", "video", "variable"].includes(message.type)) {
+              console.log(`Tipo '${message.type}' não permitido. Pulando registro com ID: ${message.id}`);
+              continue; // Pula para a próxima iteração do laço
+            }
             if (message.type === 'text') {
               let formattedText = '';
               for (const richText of message.content.richText) {
@@ -2066,7 +2096,12 @@ client.on('message', async msg => {
           
                   if (element.text) {
                     text = element.text;
-                  } else if (element.type === 'inline-variable') {              
+                  }
+                  else if (element.type === 'variable') {
+                    // Extrai o valor de 'children' assumindo que o primeiro item contém o texto desejado
+                    text = element.children[0]?.text || 'valor_padrão_para_variável';
+                  }
+                  else if (element.type === 'inline-variable') {              
                     text = element.children[0].children[0].text;
                   }
           
@@ -2118,7 +2153,7 @@ client.on('message', async msg => {
                 let delay = init_delay; // Tempo inicial de espera em milissegundos                           
             
                 const sendRequest = async () => {
-                    await chat.sendStateTyping(); // Simulando Digitação
+                    //await chat.sendStateTyping(); // Simulando Digitação
                     const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -2938,6 +2973,10 @@ client.on('vote_update', async (vote) => {
     const messages = response.data.messages;
  
   for (const message of messages){
+    if (!["text", "image", "audio", "video", "variable"].includes(message.type)) {
+      console.log(`Tipo '${message.type}' não permitido. Pulando registro com ID: ${message.id}`);
+      continue; // Pula para a próxima iteração do laço
+    }
     if (message.type === 'text') {
       let formattedText = '';
       for (const richText of message.content.richText) {
@@ -2946,7 +2985,12 @@ client.on('vote_update', async (vote) => {
   
           if (element.text) {
             text = element.text;
-          } else if (element.type === 'inline-variable') {              
+          }
+          else if (element.type === 'variable') {
+            // Extrai o valor de 'children' assumindo que o primeiro item contém o texto desejado
+            text = element.children[0]?.text || 'valor_padrão_para_variável';
+          }
+          else if (element.type === 'inline-variable') {              
             text = element.children[0].children[0].text;
           }
   

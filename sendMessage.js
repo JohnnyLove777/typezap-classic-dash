@@ -72,8 +72,6 @@ createFolderIfNotExists(mediaPath);
 
 const WEBHOOK_DB_FILE = 'webhookDB.json';
 
-const fs = require('fs');
-
 function initializeWebhookDB() {
   // Verifica se o arquivo do banco de dados já existe
   if (!fs.existsSync(WEBHOOK_DB_FILE)) {

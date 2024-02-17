@@ -254,6 +254,9 @@ app.post('/sendMessage', async (req, res) => {
                 if (!mensagem) {
                     return res.status(400).json({ status: 'falha', mensagem: 'É preciso fornecer uma mensagem' });
                 }
+                const idChat = await client.getNumberId(chatId);
+                const chat = await client.getChatById(idChat._serialized);
+                await chat.sendStateTyping();
                 await sendMessageWithRetry(chatId, mensagem);
                 break;
             case 'image':
@@ -337,7 +340,27 @@ app.post('/media', async (req, res) => {
 
       // Carregar o arquivo da pasta e dispará-lo como mensagem ao destinatário
       const media = MessageMedia.fromFilePath(filePath);
+      const extension = path.extname(filePath).toLowerCase();
+      const audioExtensions = ['.mp3', '.wav', '.ogg', '.opus'];
+
+      if (audioExtensions.includes(extension)) {
+        // Se a mídia é áudio, então obtém o ID do destinatário.
+        const destinatarioId = await client.getNumberId(destinatario);
+    
+        if (destinatarioId) {
+            // Obtém o chat pelo ID do destinatário.
+            const chat = await client.getChatById(destinatarioId._serialized);
+    
+            // Simula gravação de áudio no chat.
+            await chat.sendStateRecording();    
+            
+            await sendMessageWithRetry(destinatario, media);
+        } else {
+            console.log('Número não está registrado no WhatsApp.');
+        }
+    } else {
       await sendMessageWithRetry(destinatario, media);
+    }
 
       res.json({ status: 'sucesso', mensagem: 'Mídia enviada com sucesso' });
   } catch (error) {

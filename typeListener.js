@@ -1146,7 +1146,14 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
             deleteObject(datafrom);            
           }
         }
-        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar'))) {
+        if (formattedText.startsWith('!media')) {
+          if (existsDB(datafrom)) {
+              // Extrai o link que vem depois do primeiro espaço
+              const link = formattedText.split(' ')[1];
+              sendMediaEndPoint(datafrom, link); // Envia a requisição com retry
+          }
+        }
+        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media'))) {
           let retries = 0;
           const maxRetries = 15; // Máximo de tentativas
           let delay = init_delay; // Tempo inicial de espera em milissegundos
@@ -1852,6 +1859,44 @@ async function getBase64Data(fileUrl) {
   }
 }
 
+// Método LowMemory para enviar média
+const sendMediaEndPoint = async (datafrom, link, port = 8888) => {
+  let retries = 0;
+  const maxRetries = 5; // Máximo de tentativas de envio
+  let delay = 60000; // Tempo inicial de espera em milissegundos (1 segundo)
+
+  while (retries < maxRetries) {
+      try {
+          const response = await fetch(`http://localhost:${port}/media`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  destinatario: datafrom,
+                  token: token, // Substitua pelo seu token de segurança real
+                  link: link // Link extraído para o arquivo externo
+              })
+          });
+
+          if (!response.ok) {
+              throw new Error(`Request failed with status ${response.status}`);
+          }
+
+          const responseData = await response.json();
+          console.log('Response from /media endpoint:', responseData);
+          return; // Sai da função após sucesso
+      } catch (error) {
+          retries++;
+          console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error.message}. Tentando novamente em ${delay}ms.`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+      }
+  }
+
+  console.error('Erro: Número máximo de tentativas de envio atingido.');
+  // Aqui você pode escolher como lidar com o erro após as tentativas excedidas.
+  // process.exit(1); // Sai com erro. Descomente se estiver usando em um contexto onde isso faça sentido.
+};
+
 // Final das rotinas de disparo para Grupos
 
 async function createSessionJohnny(data, url_registro, fluxo) {
@@ -1933,7 +1978,14 @@ async function createSessionJohnny(data, url_registro, fluxo) {
             deleteObject(data.from);           
           }
         }
-        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar'))) {
+        if (formattedText.startsWith('!media')) {
+          if (existsDB(data.from)) {
+              // Extrai o link que vem depois do primeiro espaço
+              const link = formattedText.split(' ')[1];
+              sendMediaEndPoint(data.from, link); // Envia a requisição com retry
+          }
+        }
+        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media'))) {
           let retries = 0;
           const maxRetries = 15; // Máximo de tentativas
           let delay = init_delay; // Tempo inicial de espera em milissegundos
@@ -2313,7 +2365,14 @@ client.on('message', async msg => {
                   deleteObject(msg.from);
                 }
               }
-        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar'))) {
+              if (formattedText.startsWith('!media')) {
+                if (existsDB(msg.from)) {
+                    // Extrai o link que vem depois do primeiro espaço
+                    const link = formattedText.split(' ')[1];
+                    sendMediaEndPoint(msg.from, link); // Envia a requisição com retry
+                }
+              }
+              if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media'))) {
                 let retries = 0;
                 const maxRetries = 15; // Máximo de tentativas
                 let delay = init_delay; // Tempo inicial de espera em milissegundos                           
@@ -3316,7 +3375,14 @@ client.on('vote_update', async (vote) => {
           deleteObject(vote.voter);
         }
       }
-if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar'))) {
+      if (formattedText.startsWith('!media')) {
+        if (existsDB(vote.voter)) {
+            // Extrai o link que vem depois do primeiro espaço
+            const link = formattedText.split(' ')[1];
+            sendMediaEndPoint(vote.voter, link); // Envia a requisição com retry
+        }
+      }
+      if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media'))) {
         let retries = 0;
         const maxRetries = 15; // Máximo de tentativas
         let delay = init_delay; // Tempo inicial de espera em milissegundos                           

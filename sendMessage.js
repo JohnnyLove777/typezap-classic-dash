@@ -1,9 +1,10 @@
 const http = require('http');
+const https = require('https');
+const path = require('path');
 const bodyParser = require('body-parser');
 //const qrcode = require('qrcode-terminal');
 const socketIo = require('socket.io');
 const QRCode = require('qrcode');
-const crypto = require('crypto');
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
@@ -12,7 +13,7 @@ require('dotenv').config();
 
 // Gere o seu token 32 caracteres
 const SECURITY_TOKEN = "a9387747d4069f22fca5903858cdda24";
-const KIWIFY_TOKEN = process.env.KIWIFY_TOKEN;
+//const KIWIFY_TOKEN = process.env.KIWIFY_TOKEN;
 
 const sessao = "sendMessage";
 
@@ -54,6 +55,63 @@ function readJSONFileTypebotV2(filename) {
 }
 
 initializeDBTypebotV2();
+
+function createFolderIfNotExists(folderPath) {
+  if (!fs.existsSync(folderPath)) {
+      fs.mkdirSync(folderPath, { recursive: true });
+      console.log(`Pasta criada: ${folderPath}`);
+  } else {
+      console.log(`Pasta já existe: ${folderPath}`);
+  }
+}
+
+// Caminhos das pastas
+const mediaPath = path.join(__dirname, 'media')
+// Criar as pastas
+createFolderIfNotExists(mediaPath);
+
+const WEBHOOK_DB_FILE = 'webhookDB.json';
+
+const fs = require('fs');
+
+function initializeWebhookDB() {
+  // Verifica se o arquivo do banco de dados já existe
+  if (!fs.existsSync(WEBHOOK_DB_FILE)) {
+    // Se não existir, inicializa com um objeto vazio
+    const db = {};
+    writeJSONFileWebhookDB(WEBHOOK_DB_FILE, db);
+  } else {
+    // Se já existir, mantém os dados existentes
+    console.log('Banco de dados de webhook pronto para uso.');
+  }
+}
+
+function addOrUpdateWebhook(numeroId, plataforma, status) {
+  const db = readJSONFileWebhookDB(WEBHOOK_DB_FILE);
+  // Atualiza ou adiciona novo webhook com os dados fornecidos
+  db[numeroId] = { plataforma, status };
+  writeJSONFileWebhookDB(WEBHOOK_DB_FILE, db);
+}
+
+function listAllWebhooks() {
+  return readJSONFileWebhookDB(WEBHOOK_DB_FILE);
+}
+
+function readJSONFileWebhookDB(filename) {
+  try {
+    return JSON.parse(fs.readFileSync(filename, 'utf8'));
+  } catch (error) {
+    console.error('Erro ao ler o banco de dados:', error);
+    return {};
+  }
+}
+
+function writeJSONFileWebhookDB(filename, data) {
+  fs.writeFileSync(filename, JSON.stringify(data, null, 2), 'utf8');
+}
+
+// Inicializa o banco de dados de webhook, se necessário
+initializeWebhookDB();
 
 // Configurações para o primeiro cliente (Windows)
 /*const client = new Client({
@@ -235,6 +293,63 @@ app.post('/sendMessage', async (req, res) => {
     }
 });
 
+// Metodo /media
+
+// Função auxiliar para baixar arquivos
+function downloadFile(url, filePath) {
+  return new Promise((resolve, reject) => {
+      // Verifica se o arquivo já existe
+      if (fs.existsSync(filePath)) {
+          resolve(filePath);
+          return;
+      }
+
+      const fileStream = fs.createWriteStream(filePath);
+      https.get(url, (response) => {
+          response.pipe(fileStream);
+          fileStream.on('finish', () => {
+              fileStream.close();
+              resolve(filePath);
+          });
+      }).on('error', (error) => {
+          fs.unlink(filePath, () => reject(error));
+      });
+  });
+}
+
+app.post('/media', async (req, res) => {
+  const { destinatario, token, link } = req.body;
+
+  // Conferir o token
+  if (token !== SECURITY_TOKEN) {
+      return res.status(401).json({ status: 'falha', mensagem: 'Token inválido' });
+  }
+
+  try {
+      const url = new URL(link);
+      // A função path.basename já inclui a extensão do arquivo no nome do arquivo
+      const filename = path.basename(url.pathname);
+      const filePath = path.resolve(__dirname, 'media', filename);
+
+      // Verifica se o arquivo já existe para evitar sobrescrita e download desnecessário
+      if (!fs.existsSync(filePath)) {
+          // Fazer o download do arquivo na pasta 'media', caso não exista
+          await downloadFile(link, filePath);
+      }
+
+      // Carregar o arquivo da pasta e dispará-lo como mensagem ao destinatário
+      const media = MessageMedia.fromFilePath(filePath);
+      await sendMessageWithRetry(destinatario, media);
+
+      res.json({ status: 'sucesso', mensagem: 'Mídia enviada com sucesso' });
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ status: 'falha', mensagem: 'Erro ao enviar mídia' });
+  }
+});
+
+// Método /media
+
 // Método Kiwify
 
 // Função para tratar o número de telefone
@@ -251,26 +366,38 @@ function formatPhoneNumberKiwify(phone) {
 async function processAndSendMessageKiwify(event, idString) {
   // Determina o número de telefone com base no tipo de evento
   const phoneNumber = event.checkout_link ? formatPhoneNumberKiwify(event.phone) : formatPhoneNumberKiwify(event.Customer.mobile);
-  
-  // Busca todas as mensagens na base de dados
-  const dbMessages = listAllFromDBTypebotV2();
-  
-  // Inicializa a variável para armazenar a mensagem a ser enviada
-  let messageToSend = '';
-  
-  // Percorre as mensagens para encontrar uma que corresponda ao idString
-  for (let key in dbMessages) {
-    if (dbMessages[key].gatilho.startsWith(idString)) {
-      // Extrai a parte da mensagem que vem após o idString
-      messageToSend = dbMessages[key].gatilho.replace(idString, '');
-      break; // Encerra a busca assim que encontra a primeira correspondência
-    }
+
+  // Adiciona ou atualiza o webhook no banco de dados
+  const numeroId = phoneNumber; // Usando o número de telefone como ID único
+  const plataforma = "kiwify";
+  let status = event.checkout_link ? "abandoned" : "paid"; // Assume que checkout_link indica carrinho abandonado
+
+  // Verifica se já existe um registro para este númeroId com status "paid" para evitar disparo de carrinho abandonado
+  const webhooks = listAllWebhooks(); // Supõe a existência dessa função para listar todos os webhooks
+  if (webhooks[numeroId] && webhooks[numeroId].status === "paid") {
+    console.log(`Número ${numeroId} já possui status pago. Não dispara carrinho abandonado.`);
+    return; // Encerra a função se o status já for "paid"
   }
 
-  // Se uma mensagem foi encontrada, envia-a para o número de telefone formatado
-  if (messageToSend) {
-    //await sendMessageWithRetry(phoneNumber, messageToSend);
-    console.log(`Enviando mensagem para ${phoneNumber}: "${messageToSend}"`);
+  // Adiciona ou atualiza o registro no banco de dados
+  addOrUpdateWebhook(numeroId, plataforma, status);
+
+  // Procede com a busca e envio da mensagem se não for uma situação de carrinho pago
+  if (status === "abandoned") {
+    const dbMessages = listAllFromDBTypebotV2();
+
+    let messageToSend = '';
+    for (let key in dbMessages) {
+      if (dbMessages[key].gatilho.startsWith(idString)) {
+        messageToSend = dbMessages[key].gatilho.replace(idString, '');
+        break;
+      }
+    }
+
+    if (messageToSend) {
+      console.log(`Enviando mensagem para ${phoneNumber}: "${messageToSend}"`);
+      //await sendMessageWithRetry(phoneNumber, messageToSend);
+    }
   }
 }
 

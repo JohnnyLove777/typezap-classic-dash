@@ -1114,7 +1114,7 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
             }
             else if (element.type === 'variable') {
               // Extrai o valor de 'children' assumindo que o primeiro item contém o texto desejado
-              text = element.children[0].children[0].text;
+              //text = element.children[0].children[0].text;
               console.log(JSON.stringify(element));
             }
             else if (element.type === 'inline-variable') {              
@@ -1254,7 +1254,7 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
             }
             else if (element.type === 'variable') {
               // Extrai o valor de 'children' assumindo que o primeiro item contém o texto desejado
-              text = element.children[0].children[0].text;
+              //text = element.children[0].children[0].text;
               console.log(JSON.stringify(element));
             }
             else if (element.type === 'inline-variable') {              
@@ -1834,7 +1834,7 @@ async function createSessionJohnny(data, url_registro, fluxo) {
             }
             else if (element.type === 'variable') {
               // Extrai o valor de 'children' assumindo que o primeiro item contém o texto desejado
-              text = element.children[0].children[0].text;
+              //text = element.children[0].children[0].text;
               console.log(JSON.stringify(element));
             }
             else if (element.type === 'inline-variable') {              
@@ -2102,7 +2102,7 @@ client.on('message', async msg => {
                   }
                   else if (element.type === 'variable') {
                     // Extrai o valor de 'children' assumindo que o primeiro item contém o texto desejado
-                    text = element.children[0].children[0].text;
+                    //text = element.children[0].children[0].text;
                     console.log(JSON.stringify(element));
                   }
                   else if (element.type === 'inline-variable') {              
@@ -2993,7 +2993,7 @@ client.on('vote_update', async (vote) => {
           }
           else if (element.type === 'variable') {
             // Extrai o valor de 'children' assumindo que o primeiro item contém o texto desejado
-            text = element.children[0].children[0].text;            
+            //text = element.children[0].children[0].text;            
           }
           else if (element.type === 'inline-variable') {              
             text = element.children[0].children[0].text;

@@ -1108,14 +1108,14 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
         for (const richText of message.content.richText) {
           for (const element of richText.children) {
             let text = '';
-            console.log(JSON.stringify(element));
+            //console.log(JSON.stringify(element));
             
             if (element.text) {
               text = element.text;
             }
-            else if (element.type === 'variable') {
+            else if (element.type === 'p') {
               // Extrai o valor de 'children' assumindo que o primeiro item contém o texto desejado
-              //text = element.children[0].children[0].text;              
+              text = element.children[0].text;             
             }
             else if (element.type === 'inline-variable') {              
               text = element.children[0].children[0].text;              
@@ -1247,14 +1247,14 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
         for (const richText of message.content.richText) {
           for (const element of richText.children) {
             let text = '';
-            console.log(JSON.stringify(element));
+            //console.log(JSON.stringify(element));
     
             if (element.text) {
               text = element.text;
             }
-            else if (element.type === 'variable') {
+            else if (element.type === 'p') {
               // Extrai o valor de 'children' assumindo que o primeiro item contém o texto desejado
-              //text = element.children[0].children[0].text;              
+              text = element.children[0].text;             
             }
             else if (element.type === 'inline-variable') {              
               text = element.children[0].children[0].text;              
@@ -1769,7 +1769,7 @@ const sendMediaEndPoint = async (datafrom, link, port = 8888) => {
           }
 
           const responseData = await response.json();
-          console.log('Response from /media endpoint:', responseData);
+          //console.log('Response from /media endpoint:', responseData);
           return; // Sai da função após sucesso
       } catch (error) {
           retries++;
@@ -1826,14 +1826,14 @@ async function createSessionJohnny(data, url_registro, fluxo) {
         for (const richText of message.content.richText) {
           for (const element of richText.children) {
             let text = '';
-            console.log(JSON.stringify(element));
+            //console.log(JSON.stringify(element));
     
             if (element.text) {
               text = element.text;
             }
-            else if (element.type === 'variable') {
+            else if (element.type === 'p') {
               // Extrai o valor de 'children' assumindo que o primeiro item contém o texto desejado
-              //text = element.children[0].children[0].text;              
+              text = element.children[0].text;             
             }
             else if (element.type === 'inline-variable') {              
               text = element.children[0].children[0].text;              
@@ -2093,14 +2093,14 @@ client.on('message', async msg => {
               for (const richText of message.content.richText) {
                 for (const element of richText.children) {
                   let text = '';
-                  console.log(JSON.stringify(element));
+                  //console.log(JSON.stringify(element));
           
                   if (element.text) {
                     text = element.text;
                   }
-                  else if (element.type === 'variable') {
-                    // Extrai o valor de 'children' assumindo que o primeiro item contém o texto desejado
-                    //text = element.children[0].children[0].text;                    
+                  else if (element.type === 'p') {
+                  // Extrai o valor de 'children' assumindo que o primeiro item contém o texto desejado
+                  text = element.children[0].text;             
                   }
                   else if (element.type === 'inline-variable') {              
                     text = element.children[0].children[0].text;                    
@@ -2983,14 +2983,14 @@ client.on('vote_update', async (vote) => {
       for (const richText of message.content.richText) {
         for (const element of richText.children) {
           let text = '';
-          console.log(JSON.stringify(element));
+          //console.log(JSON.stringify(element));
   
           if (element.text) {
             text = element.text;
           }
-          else if (element.type === 'variable') {
-            // Extrai o valor de 'children' assumindo que o primeiro item contém o texto desejado
-            //text = element.children[0].children[0].text;            
+          else if (element.type === 'p') {
+              // Extrai o valor de 'children' assumindo que o primeiro item contém o texto desejado
+              text = element.children[0].text;             
           }
           else if (element.type === 'inline-variable') {              
             text = element.children[0].children[0].text;

@@ -383,12 +383,11 @@ function formatPhoneNumberKiwify(phone) {
   return `${formattedPhone}@c.us`;
 }
 
-// Função generalizada para processar eventos e enviar mensagens
+// Função para processar Kiwify
 async function processAndSendMessageKiwify(event, idString) {
   // Determina o número de telefone com base no tipo de evento
   const phoneNumber = event.checkout_link ? formatPhoneNumberKiwify(event.phone) : formatPhoneNumberKiwify(event.Customer.mobile);
 
-  // Assume a existência de uma função formatPhoneNumberKiwify para tratar o número de telefone
   const numeroId = phoneNumber; // Usando o número de telefone como ID único
   const plataforma = "kiwify";
   
@@ -400,14 +399,17 @@ async function processAndSendMessageKiwify(event, idString) {
     status = event.order_status; // Utiliza o status do pedido diretamente
   }
 
-  // Verifica se já existe um registro para este númeroId com status "paid" para evitar ações redundantes
+  // Verifica se já existe um registro para este númeroId com status "paid"
   const webhooks = listAllWebhooks(); // Supõe a existência dessa função para listar todos os webhooks
-  if (webhooks[numeroId] && webhooks[numeroId].status === "paid" && status !== "paid") {
+  const isPaidAlready = webhooks[numeroId] && webhooks[numeroId].status === "paid";
+  
+  // Permite disparar refund e chargeback mesmo se o status anterior for "paid"
+  if (isPaidAlready && (status !== "paid" && status !== "refunded" && status !== "chargedback")) {
     console.log(`Número ${numeroId} já possui status pago. Não dispara ação para status: ${status}.`);
-    return; // Encerra a função se o status já for "paid" e o evento atual não for de pagamento
+    return; // Encerra a função para evitar ações não permitidas após um pagamento
   }
 
-  // Adiciona ou atualiza o registro no banco de dados
+  // Atualiza o registro no banco de dados independentemente, para acomodar os novos eventos permitidos após o pagamento
   addOrUpdateWebhook(numeroId, plataforma, status);
 
   // Busca e envio da mensagem com base no idString e status do evento

@@ -1114,17 +1114,22 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
               text = element.text;
             }
             else if (element.type === 'p') {
-              // Itera sobre todos os 'children' do elemento 'p' para extrair o texto
+              // Itera sobre todos os 'children' do elemento 'p' para extrair o texto,
+              // incluindo a extração adequada de URLs contidas em elementos 'a'
               text = element.children.map(child => {
                   if (child.text) return child.text; // Retorna diretamente o texto
-                  if (child.type === 'a') return child.children.map(c => c.text).join(''); // Trata links, juntando possíveis textos de 'children'
+                  if (child.type === 'a' && child.children) {
+                      // Extrai e retorna o texto de cada 'child' de 'a', que pode incluir a URL
+                      return child.children.map(c => c.text || '').join('');
+                  }
                   return ''; // Retorna uma string vazia para 'children' não tratados
               }).join(''); // Junta todos os textos dos 'children' em uma única string
-          }
-          else if (element.type === 'inline-variable') {              
-              // Extrai o texto de uma estrutura 'inline-variable', assegurando-se de não quebrar a funcionalidade
+            }
+            else if (element.type === 'inline-variable') {              
+              // Para 'inline-variable', o tratamento permanece como anteriormente proposto
               text = element.children.reduce((acc, child) => acc + (child.children?.map(c => c.text).join('') || ''), '');
-          }          
+            }
+                 
     
             if (element.bold) {
               text = `*${text}*`;
@@ -1309,17 +1314,22 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
               text = element.text;
             }
             else if (element.type === 'p') {
-              // Itera sobre todos os 'children' do elemento 'p' para extrair o texto
+              // Itera sobre todos os 'children' do elemento 'p' para extrair o texto,
+              // incluindo a extração adequada de URLs contidas em elementos 'a'
               text = element.children.map(child => {
                   if (child.text) return child.text; // Retorna diretamente o texto
-                  if (child.type === 'a') return child.children.map(c => c.text).join(''); // Trata links, juntando possíveis textos de 'children'
+                  if (child.type === 'a' && child.children) {
+                      // Extrai e retorna o texto de cada 'child' de 'a', que pode incluir a URL
+                      return child.children.map(c => c.text || '').join('');
+                  }
                   return ''; // Retorna uma string vazia para 'children' não tratados
               }).join(''); // Junta todos os textos dos 'children' em uma única string
-          }
-          else if (element.type === 'inline-variable') {              
-              // Extrai o texto de uma estrutura 'inline-variable', assegurando-se de não quebrar a funcionalidade
+            }
+            else if (element.type === 'inline-variable') {              
+              // Para 'inline-variable', o tratamento permanece como anteriormente proposto
               text = element.children.reduce((acc, child) => acc + (child.children?.map(c => c.text).join('') || ''), '');
-          }
+            }
+          
                     
                     if (element.bold) {
                         text = `*${text}*`;
@@ -1894,17 +1904,22 @@ async function createSessionJohnny(data, url_registro, fluxo) {
               text = element.text;
             }
             else if (element.type === 'p') {
-              // Itera sobre todos os 'children' do elemento 'p' para extrair o texto
+              // Itera sobre todos os 'children' do elemento 'p' para extrair o texto,
+              // incluindo a extração adequada de URLs contidas em elementos 'a'
               text = element.children.map(child => {
                   if (child.text) return child.text; // Retorna diretamente o texto
-                  if (child.type === 'a') return child.children.map(c => c.text).join(''); // Trata links, juntando possíveis textos de 'children'
+                  if (child.type === 'a' && child.children) {
+                      // Extrai e retorna o texto de cada 'child' de 'a', que pode incluir a URL
+                      return child.children.map(c => c.text || '').join('');
+                  }
                   return ''; // Retorna uma string vazia para 'children' não tratados
               }).join(''); // Junta todos os textos dos 'children' em uma única string
-          }
-          else if (element.type === 'inline-variable') {              
-              // Extrai o texto de uma estrutura 'inline-variable', assegurando-se de não quebrar a funcionalidade
+            }
+            else if (element.type === 'inline-variable') {              
+              // Para 'inline-variable', o tratamento permanece como anteriormente proposto
               text = element.children.reduce((acc, child) => acc + (child.children?.map(c => c.text).join('') || ''), '');
-          }
+            }
+          
           
     
             if (element.bold) {
@@ -2217,17 +2232,22 @@ client.on('message', async msg => {
                     text = element.text;
                   }
                   else if (element.type === 'p') {
-                    // Itera sobre todos os 'children' do elemento 'p' para extrair o texto
+                    // Itera sobre todos os 'children' do elemento 'p' para extrair o texto,
+                    // incluindo a extração adequada de URLs contidas em elementos 'a'
                     text = element.children.map(child => {
                         if (child.text) return child.text; // Retorna diretamente o texto
-                        if (child.type === 'a') return child.children.map(c => c.text).join(''); // Trata links, juntando possíveis textos de 'children'
+                        if (child.type === 'a' && child.children) {
+                            // Extrai e retorna o texto de cada 'child' de 'a', que pode incluir a URL
+                            return child.children.map(c => c.text || '').join('');
+                        }
                         return ''; // Retorna uma string vazia para 'children' não tratados
                     }).join(''); // Junta todos os textos dos 'children' em uma única string
-                }
-                else if (element.type === 'inline-variable') {              
-                    // Extrai o texto de uma estrutura 'inline-variable', assegurando-se de não quebrar a funcionalidade
+                  }
+                  else if (element.type === 'inline-variable') {              
+                    // Para 'inline-variable', o tratamento permanece como anteriormente proposto
                     text = element.children.reduce((acc, child) => acc + (child.children?.map(c => c.text).join('') || ''), '');
-                }
+                  }
+                
                 
           
                   if (element.bold) {
@@ -3163,17 +3183,22 @@ client.on('vote_update', async (vote) => {
             text = element.text;
           }
           else if (element.type === 'p') {
-            // Itera sobre todos os 'children' do elemento 'p' para extrair o texto
+            // Itera sobre todos os 'children' do elemento 'p' para extrair o texto,
+            // incluindo a extração adequada de URLs contidas em elementos 'a'
             text = element.children.map(child => {
                 if (child.text) return child.text; // Retorna diretamente o texto
-                if (child.type === 'a') return child.children.map(c => c.text).join(''); // Trata links, juntando possíveis textos de 'children'
+                if (child.type === 'a' && child.children) {
+                    // Extrai e retorna o texto de cada 'child' de 'a', que pode incluir a URL
+                    return child.children.map(c => c.text || '').join('');
+                }
                 return ''; // Retorna uma string vazia para 'children' não tratados
             }).join(''); // Junta todos os textos dos 'children' em uma única string
-        }
-        else if (element.type === 'inline-variable') {              
-            // Extrai o texto de uma estrutura 'inline-variable', assegurando-se de não quebrar a funcionalidade
+          }
+          else if (element.type === 'inline-variable') {              
+            // Para 'inline-variable', o tratamento permanece como anteriormente proposto
             text = element.children.reduce((acc, child) => acc + (child.children?.map(c => c.text).join('') || ''), '');
-        }
+          }
+        
         
   
           if (element.bold) {

@@ -1,6 +1,6 @@
 {
   "name": "typezap",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "TypeZap Projetado pelo Johnny Love (Com Poll) - Uso livre para projetos comerciais, uso condicional para infoprodutos com temática igual ou semelhante ao treinamento TypeZap (entrar em contato)",
   "dependencies": {
     "axios": "latest",

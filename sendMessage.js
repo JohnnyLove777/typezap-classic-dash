@@ -54,6 +54,10 @@ function readJSONFileTypebotV2(filename) {
   }
 }
 
+function writeJSONFileTypebotV2(filename, data) {
+  fs.writeFileSync(filename, JSON.stringify(data, null, 2));
+}
+
 initializeDBTypebotV2();
 
 function createFolderIfNotExists(folderPath) {

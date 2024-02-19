@@ -1114,12 +1114,17 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
               text = element.text;
             }
             else if (element.type === 'p') {
-              // Extrai o valor de 'children' assumindo que o primeiro item contém o texto desejado
-              text = element.children[0].text;             
-            }
-            else if (element.type === 'inline-variable') {              
-              text = element.children[0].children[0].text;              
-            }
+              // Itera sobre todos os 'children' do elemento 'p' para extrair o texto
+              text = element.children.map(child => {
+                  if (child.text) return child.text; // Retorna diretamente o texto
+                  if (child.type === 'a') return child.children.map(c => c.text).join(''); // Trata links, juntando possíveis textos de 'children'
+                  return ''; // Retorna uma string vazia para 'children' não tratados
+              }).join(''); // Junta todos os textos dos 'children' em uma única string
+          }
+          else if (element.type === 'inline-variable') {              
+              // Extrai o texto de uma estrutura 'inline-variable', assegurando-se de não quebrar a funcionalidade
+              text = element.children.reduce((acc, child) => acc + (child.children?.map(c => c.text).join('') || ''), '');
+          }          
     
             if (element.bold) {
               text = `*${text}*`;
@@ -1163,7 +1168,57 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
               await sendMediaEndPoint(datafrom, link); // Envia a requisição com retry
           }
         }
-        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media'))) {
+        if (formattedText.startsWith('!myself')) {
+          if (existsDB(datafrom)) {              
+              const mensagem = formattedText.split(' ')[1];
+
+              let retries = 0;
+              const maxRetries = 15; // Máximo de tentativas
+              let delay = init_delay; // Tempo inicial de espera em milissegundos
+          
+      
+              const sendRequest = async () => {              
+              const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                      destinatario: data.to,
+                      mensagem: mensagem,
+                      tipo: "text",
+                      msg: data,
+                      token: token
+                  })
+              });
+      
+              if (!response.ok) {
+                  throw new Error(`Request failed with status ${response.status}`);
+              }
+      
+              return await response.json();
+          };
+      
+          const sendMessageWithRetry = async () => {
+            while (retries < maxRetries) {
+                try {
+                    await sendRequest();
+                    //console.log('Mensagem enviada com sucesso.');
+                    return;
+                } catch (error) {
+                    retries++;
+                    console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                }
+            }
+            console.error('Erro: Número máximo de tentativas de envio atingido.');
+            process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
+        };
+        
+           sendMessageWithRetry();
+              
+          }
+        }
+        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself'))) {
           let retries = 0;
           const maxRetries = 15; // Máximo de tentativas
           let delay = init_delay; // Tempo inicial de espera em milissegundos
@@ -1204,9 +1259,9 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
             }
             console.error('Erro: Número máximo de tentativas de envio atingido.');
             process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
-        };
+          };
         
-        sendMessageWithRetry();
+          sendMessageWithRetry();
       }      
       }
       if (message.type === 'image') {        
@@ -1242,6 +1297,7 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
         console.log(`Tipo '${message.type}' não permitido. Pulando registro com ID: ${message.id}`);
         continue; // Pula para a próxima iteração do laço
       }
+      const messageObj = {};
       if (message.type === 'text') {
         let formattedText = '';
         for (const richText of message.content.richText) {
@@ -1253,12 +1309,18 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
               text = element.text;
             }
             else if (element.type === 'p') {
-              // Extrai o valor de 'children' assumindo que o primeiro item contém o texto desejado
-              text = element.children[0].text;             
-            }
-            else if (element.type === 'inline-variable') {              
-              text = element.children[0].children[0].text;              
-            }          
+              // Itera sobre todos os 'children' do elemento 'p' para extrair o texto
+              text = element.children.map(child => {
+                  if (child.text) return child.text; // Retorna diretamente o texto
+                  if (child.type === 'a') return child.children.map(c => c.text).join(''); // Trata links, juntando possíveis textos de 'children'
+                  return ''; // Retorna uma string vazia para 'children' não tratados
+              }).join(''); // Junta todos os textos dos 'children' em uma única string
+          }
+          else if (element.type === 'inline-variable') {              
+              // Extrai o texto de uma estrutura 'inline-variable', assegurando-se de não quebrar a funcionalidade
+              text = element.children.reduce((acc, child) => acc + (child.children?.map(c => c.text).join('') || ''), '');
+          }
+                    
                     if (element.bold) {
                         text = `*${text}*`;
                     }
@@ -1832,12 +1894,18 @@ async function createSessionJohnny(data, url_registro, fluxo) {
               text = element.text;
             }
             else if (element.type === 'p') {
-              // Extrai o valor de 'children' assumindo que o primeiro item contém o texto desejado
-              text = element.children[0].text;             
-            }
-            else if (element.type === 'inline-variable') {              
-              text = element.children[0].children[0].text;              
-            }
+              // Itera sobre todos os 'children' do elemento 'p' para extrair o texto
+              text = element.children.map(child => {
+                  if (child.text) return child.text; // Retorna diretamente o texto
+                  if (child.type === 'a') return child.children.map(c => c.text).join(''); // Trata links, juntando possíveis textos de 'children'
+                  return ''; // Retorna uma string vazia para 'children' não tratados
+              }).join(''); // Junta todos os textos dos 'children' em uma única string
+          }
+          else if (element.type === 'inline-variable') {              
+              // Extrai o texto de uma estrutura 'inline-variable', assegurando-se de não quebrar a funcionalidade
+              text = element.children.reduce((acc, child) => acc + (child.children?.map(c => c.text).join('') || ''), '');
+          }
+          
     
             if (element.bold) {
               text = `*${text}*`;
@@ -1881,7 +1949,57 @@ async function createSessionJohnny(data, url_registro, fluxo) {
               await sendMediaEndPoint(data.from, link); // Envia a requisição com retry
           }
         }
-        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media'))) {
+        if (formattedText.startsWith('!myself')) {
+          if (existsDB(data.from)) {              
+              const mensagem = formattedText.split(' ')[1];
+
+              let retries = 0;
+              const maxRetries = 15; // Máximo de tentativas
+              let delay = init_delay; // Tempo inicial de espera em milissegundos
+          
+      
+              const sendRequest = async () => {              
+              const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                      destinatario: data.to,
+                      mensagem: mensagem,
+                      tipo: "text",
+                      msg: data,
+                      token: token
+                  })
+              });
+      
+              if (!response.ok) {
+                  throw new Error(`Request failed with status ${response.status}`);
+              }
+      
+              return await response.json();
+          };
+      
+          const sendMessageWithRetry = async () => {
+            while (retries < maxRetries) {
+                try {
+                    await sendRequest();
+                    //console.log('Mensagem enviada com sucesso.');
+                    return;
+                } catch (error) {
+                    retries++;
+                    console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                }
+            }
+            console.error('Erro: Número máximo de tentativas de envio atingido.');
+            process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
+        };
+        
+           sendMessageWithRetry();
+              
+          }
+        }
+        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself'))) {
           let retries = 0;
           const maxRetries = 15; // Máximo de tentativas
           let delay = init_delay; // Tempo inicial de espera em milissegundos
@@ -2099,12 +2217,18 @@ client.on('message', async msg => {
                     text = element.text;
                   }
                   else if (element.type === 'p') {
-                  // Extrai o valor de 'children' assumindo que o primeiro item contém o texto desejado
-                  text = element.children[0].text;             
-                  }
-                  else if (element.type === 'inline-variable') {              
-                    text = element.children[0].children[0].text;                    
-                  }
+                    // Itera sobre todos os 'children' do elemento 'p' para extrair o texto
+                    text = element.children.map(child => {
+                        if (child.text) return child.text; // Retorna diretamente o texto
+                        if (child.type === 'a') return child.children.map(c => c.text).join(''); // Trata links, juntando possíveis textos de 'children'
+                        return ''; // Retorna uma string vazia para 'children' não tratados
+                    }).join(''); // Junta todos os textos dos 'children' em uma única string
+                }
+                else if (element.type === 'inline-variable') {              
+                    // Extrai o texto de uma estrutura 'inline-variable', assegurando-se de não quebrar a funcionalidade
+                    text = element.children.reduce((acc, child) => acc + (child.children?.map(c => c.text).join('') || ''), '');
+                }
+                
           
                   if (element.bold) {
                     text = `*${text}*`;
@@ -2148,7 +2272,57 @@ client.on('message', async msg => {
                     await sendMediaEndPoint(msg.from, link); // Envia a requisição com retry
                 }
               }
-              if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media'))) {
+              if (formattedText.startsWith('!myself')) {
+                if (existsDB(msg.from)) {              
+                    const mensagem = formattedText.split(' ')[1];
+      
+                    let retries = 0;
+                    const maxRetries = 15; // Máximo de tentativas
+                    let delay = init_delay; // Tempo inicial de espera em milissegundos
+                
+            
+                    const sendRequest = async () => {              
+                    const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            destinatario: msg.to,
+                            mensagem: mensagem,
+                            tipo: "text",
+                            msg: data,
+                            token: token
+                        })
+                    });
+            
+                    if (!response.ok) {
+                        throw new Error(`Request failed with status ${response.status}`);
+                    }
+            
+                    return await response.json();
+                };
+            
+                const sendMessageWithRetry = async () => {
+                  while (retries < maxRetries) {
+                      try {
+                          await sendRequest();
+                          //console.log('Mensagem enviada com sucesso.');
+                          return;
+                      } catch (error) {
+                          retries++;
+                          console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                          await new Promise(resolve => setTimeout(resolve, delay));
+                          delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                      }
+                  }
+                  console.error('Erro: Número máximo de tentativas de envio atingido.');
+                  process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
+              };
+              
+                 sendMessageWithRetry();
+                    
+                }
+              }
+              if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself'))) {
                 let retries = 0;
                 const maxRetries = 15; // Máximo de tentativas
                 let delay = init_delay; // Tempo inicial de espera em milissegundos                           
@@ -2989,12 +3163,18 @@ client.on('vote_update', async (vote) => {
             text = element.text;
           }
           else if (element.type === 'p') {
-              // Extrai o valor de 'children' assumindo que o primeiro item contém o texto desejado
-              text = element.children[0].text;             
-          }
-          else if (element.type === 'inline-variable') {              
-            text = element.children[0].children[0].text;
-          }
+            // Itera sobre todos os 'children' do elemento 'p' para extrair o texto
+            text = element.children.map(child => {
+                if (child.text) return child.text; // Retorna diretamente o texto
+                if (child.type === 'a') return child.children.map(c => c.text).join(''); // Trata links, juntando possíveis textos de 'children'
+                return ''; // Retorna uma string vazia para 'children' não tratados
+            }).join(''); // Junta todos os textos dos 'children' em uma única string
+        }
+        else if (element.type === 'inline-variable') {              
+            // Extrai o texto de uma estrutura 'inline-variable', assegurando-se de não quebrar a funcionalidade
+            text = element.children.reduce((acc, child) => acc + (child.children?.map(c => c.text).join('') || ''), '');
+        }
+        
   
           if (element.bold) {
             text = `*${text}*`;

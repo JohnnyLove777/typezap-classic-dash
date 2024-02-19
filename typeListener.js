@@ -1650,7 +1650,7 @@ function groupIDExistsInV5(groupID) {
 
 const groupProcesses = {}; // Armazena o estado de processamento para cada grupo
 
-async function processGroupMessages(groupID, isFirstRun = true) {
+/*async function processGroupMessages(groupID, isFirstRun = true) {
   if (groupProcesses[groupID]) {
       console.log(`Processo de mensagem já em andamento para o grupo ${groupID}.`);
       return;
@@ -1707,7 +1707,53 @@ async function processGroupMessages(groupID, isFirstRun = true) {
   };
 
   processMessage();
-}
+}*/
+
+const processMessage = async () => {
+  const db = readJSONFileTypebotV5(DATABASE_FILE_TYPEBOT_V5);
+  const groupConfig = db[groupID];
+
+  if (!groupConfig || !groupConfig.messages || groupConfig.messages.length === 0) {
+      console.log(`Nenhuma configuração de mensagem encontrada para o grupo ${groupID}.`);
+      groupProcesses[groupID] = false;
+      return;
+  }
+
+  // Ajuste para pular a primeira mensagem de espera somente na primeira execução
+  if (isFirstRun && groupConfig.nextIndex === 0 && groupConfig.messages.length > 1) {
+      groupConfig.nextIndex = 1;
+  }
+
+  const currentTime = new Date();
+  const nextDispatchTime = new Date(groupConfig.nextDispatchTime);
+
+  if (currentTime >= nextDispatchTime) {
+      if (groupConfig.nextIndex >= groupConfig.messages.length) {
+          groupConfig.nextIndex = 0; // Resetar o índice se ele exceder o comprimento do array
+      }
+
+      const messageObj = groupConfig.messages[groupConfig.nextIndex];
+      let waitSeconds = 7; // Tempo padrão em segundos
+
+      if (messageObj && messageObj.type === 'wait') {
+          waitSeconds = parseInt(messageObj.content);
+      } else if (messageObj && messageObj.type === 'text') {
+          await sendRequest(groupID, messageObj.content, 'text');              
+      } else if (messageObj && ['image', 'video', 'audio'].includes(messageObj.type)) {
+          // Substituição direta pela URL contida em messageObj.content.url
+          await sendMediaEndPoint(groupID, messageObj.content.url); // Omitindo a porta, assumindo o padrão
+      } else {
+          console.error('Tipo de mensagem não suportado');
+      }
+
+      let nextIndex = (groupConfig.nextIndex + 1) % groupConfig.messages.length;
+      const newDispatchTime = new Date(currentTime.getTime() + waitSeconds * 1000);
+      updateNextDispatchV5(groupID, nextIndex, newDispatchTime);
+  }
+
+  const timeUntilNextDispatch = nextDispatchTime.getTime() - currentTime.getTime();
+  setTimeout(processMessage, Math.max(timeUntilNextDispatch, 0));
+};
 
 async function sendRequest(groupID, content, type) {
   let retries = 0;

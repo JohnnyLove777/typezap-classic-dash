@@ -1114,16 +1114,13 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
               text = element.text;
             }
             else if (element.type === 'p') {
-              // Itera sobre todos os 'children' do elemento 'p' para extrair o texto,
-              // incluindo a extração adequada de URLs contidas em elementos 'a'
+              // Itera sobre todos os 'children' do elemento 'p' para extrair o texto
+              // e concatena o conteúdo da URL se o 'child' contiver a propriedade 'url'
               text = element.children.map(child => {
                   if (child.text) return child.text; // Retorna diretamente o texto
-                  if (child.type === 'a' && child.children) {
-                      // Extrai e retorna o texto de cada 'child' de 'a', que pode incluir a URL
-                      return child.children.map(c => c.text || '').join('');
-                  }
+                  if (child.url) return child.url; // Extrai e retorna a URL como texto
                   return ''; // Retorna uma string vazia para 'children' não tratados
-              }).join(''); // Junta todos os textos dos 'children' em uma única string
+              }).join(''); // Junta todos os textos e URLs dos 'children' em uma única string
             }
             else if (element.type === 'inline-variable') {              
               // Para 'inline-variable', o tratamento permanece como anteriormente proposto
@@ -1314,16 +1311,13 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
               text = element.text;
             }
             else if (element.type === 'p') {
-              // Itera sobre todos os 'children' do elemento 'p' para extrair o texto,
-              // incluindo a extração adequada de URLs contidas em elementos 'a'
+              // Itera sobre todos os 'children' do elemento 'p' para extrair o texto
+              // e concatena o conteúdo da URL se o 'child' contiver a propriedade 'url'
               text = element.children.map(child => {
                   if (child.text) return child.text; // Retorna diretamente o texto
-                  if (child.type === 'a' && child.children) {
-                      // Extrai e retorna o texto de cada 'child' de 'a', que pode incluir a URL
-                      return child.children.map(c => c.text || '').join('');
-                  }
+                  if (child.url) return child.url; // Extrai e retorna a URL como texto
                   return ''; // Retorna uma string vazia para 'children' não tratados
-              }).join(''); // Junta todos os textos dos 'children' em uma única string
+              }).join(''); // Junta todos os textos e URLs dos 'children' em uma única string
             }
             else if (element.type === 'inline-variable') {              
               // Para 'inline-variable', o tratamento permanece como anteriormente proposto
@@ -1904,16 +1898,13 @@ async function createSessionJohnny(data, url_registro, fluxo) {
               text = element.text;
             }
             else if (element.type === 'p') {
-              // Itera sobre todos os 'children' do elemento 'p' para extrair o texto,
-              // incluindo a extração adequada de URLs contidas em elementos 'a'
+              // Itera sobre todos os 'children' do elemento 'p' para extrair o texto
+              // e concatena o conteúdo da URL se o 'child' contiver a propriedade 'url'
               text = element.children.map(child => {
                   if (child.text) return child.text; // Retorna diretamente o texto
-                  if (child.type === 'a' && child.children) {
-                      // Extrai e retorna o texto de cada 'child' de 'a', que pode incluir a URL
-                      return child.children.map(c => c.text || '').join('');
-                  }
+                  if (child.url) return child.url; // Extrai e retorna a URL como texto
                   return ''; // Retorna uma string vazia para 'children' não tratados
-              }).join(''); // Junta todos os textos dos 'children' em uma única string
+              }).join(''); // Junta todos os textos e URLs dos 'children' em uma única string
             }
             else if (element.type === 'inline-variable') {              
               // Para 'inline-variable', o tratamento permanece como anteriormente proposto
@@ -2232,16 +2223,13 @@ client.on('message', async msg => {
                     text = element.text;
                   }
                   else if (element.type === 'p') {
-                    // Itera sobre todos os 'children' do elemento 'p' para extrair o texto,
-                    // incluindo a extração adequada de URLs contidas em elementos 'a'
+                    // Itera sobre todos os 'children' do elemento 'p' para extrair o texto
+                    // e concatena o conteúdo da URL se o 'child' contiver a propriedade 'url'
                     text = element.children.map(child => {
                         if (child.text) return child.text; // Retorna diretamente o texto
-                        if (child.type === 'a' && child.children) {
-                            // Extrai e retorna o texto de cada 'child' de 'a', que pode incluir a URL
-                            return child.children.map(c => c.text || '').join('');
-                        }
+                        if (child.url) return child.url; // Extrai e retorna a URL como texto
                         return ''; // Retorna uma string vazia para 'children' não tratados
-                    }).join(''); // Junta todos os textos dos 'children' em uma única string
+                    }).join(''); // Junta todos os textos e URLs dos 'children' em uma única string
                   }
                   else if (element.type === 'inline-variable') {              
                     // Para 'inline-variable', o tratamento permanece como anteriormente proposto
@@ -3183,16 +3171,13 @@ client.on('vote_update', async (vote) => {
             text = element.text;
           }
           else if (element.type === 'p') {
-            // Itera sobre todos os 'children' do elemento 'p' para extrair o texto,
-            // incluindo a extração adequada de URLs contidas em elementos 'a'
+            // Itera sobre todos os 'children' do elemento 'p' para extrair o texto
+            // e concatena o conteúdo da URL se o 'child' contiver a propriedade 'url'
             text = element.children.map(child => {
                 if (child.text) return child.text; // Retorna diretamente o texto
-                if (child.type === 'a' && child.children) {
-                    // Extrai e retorna o texto de cada 'child' de 'a', que pode incluir a URL
-                    return child.children.map(c => c.text || '').join('');
-                }
+                if (child.url) return child.url; // Extrai e retorna a URL como texto
                 return ''; // Retorna uma string vazia para 'children' não tratados
-            }).join(''); // Junta todos os textos dos 'children' em uma única string
+            }).join(''); // Junta todos os textos e URLs dos 'children' em uma única string
           }
           else if (element.type === 'inline-variable') {              
             // Para 'inline-variable', o tratamento permanece como anteriormente proposto

@@ -1117,11 +1117,26 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
               // Itera sobre todos os 'children' do elemento 'p' para extrair o texto
               // e concatena o conteúdo da URL se o 'child' contiver a propriedade 'url'
               text = element.children.map(child => {
-                  if (child.text) return child.text; // Retorna diretamente o texto
-                  if (child.url) return child.url; // Extrai e retorna a URL como texto
+                  if (child.text) return child.text; // Retorna diretamente o texto                  
                   return ''; // Retorna uma string vazia para 'children' não tratados
               }).join(''); // Junta todos os textos e URLs dos 'children' em uma única string
             }
+            else if (element.type === 'p') {
+              // Itera sobre todos os 'children' do elemento 'p'
+              text = element.children.map(child => {
+                  if (child.text) {
+                      // Retorna diretamente o texto se o 'child' contiver a propriedade 'text'
+                      return child.text;
+                  } else if (child.type === 'a' && child.url) {
+                      // Se o 'child' for do tipo 'a' e contiver uma propriedade 'url',
+                      // extrai a URL como texto. Além disso, verifica se há texto dentro do 'children' de 'a'
+                      const linkText = child.children.length > 0 ? child.children[0].text : child.url;
+                      return linkText;
+                  }
+                  return ''; // Retorna uma string vazia para 'children' não tratados
+              }).join(''); // Junta todos os textos dos 'children' em uma única string
+            }
+          
             else if (element.type === 'inline-variable') {              
               // Para 'inline-variable', o tratamento permanece como anteriormente proposto
               text = element.children.reduce((acc, child) => acc + (child.children?.map(c => c.text).join('') || ''), '');
@@ -1314,11 +1329,26 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
               // Itera sobre todos os 'children' do elemento 'p' para extrair o texto
               // e concatena o conteúdo da URL se o 'child' contiver a propriedade 'url'
               text = element.children.map(child => {
-                  if (child.text) return child.text; // Retorna diretamente o texto
-                  if (child.url) return child.url; // Extrai e retorna a URL como texto
+                  if (child.text) return child.text; // Retorna diretamente o texto                  
                   return ''; // Retorna uma string vazia para 'children' não tratados
               }).join(''); // Junta todos os textos e URLs dos 'children' em uma única string
             }
+            else if (element.type === 'p') {
+              // Itera sobre todos os 'children' do elemento 'p'
+              text = element.children.map(child => {
+                  if (child.text) {
+                      // Retorna diretamente o texto se o 'child' contiver a propriedade 'text'
+                      return child.text;
+                  } else if (child.type === 'a' && child.url) {
+                      // Se o 'child' for do tipo 'a' e contiver uma propriedade 'url',
+                      // extrai a URL como texto. Além disso, verifica se há texto dentro do 'children' de 'a'
+                      const linkText = child.children.length > 0 ? child.children[0].text : child.url;
+                      return linkText;
+                  }
+                  return ''; // Retorna uma string vazia para 'children' não tratados
+              }).join(''); // Junta todos os textos dos 'children' em uma única string
+            }
+          
             else if (element.type === 'inline-variable') {              
               // Para 'inline-variable', o tratamento permanece como anteriormente proposto
               text = element.children.reduce((acc, child) => acc + (child.children?.map(c => c.text).join('') || ''), '');
@@ -1901,11 +1931,26 @@ async function createSessionJohnny(data, url_registro, fluxo) {
               // Itera sobre todos os 'children' do elemento 'p' para extrair o texto
               // e concatena o conteúdo da URL se o 'child' contiver a propriedade 'url'
               text = element.children.map(child => {
-                  if (child.text) return child.text; // Retorna diretamente o texto
-                  if (child.url) return child.url; // Extrai e retorna a URL como texto
+                  if (child.text) return child.text; // Retorna diretamente o texto                  
                   return ''; // Retorna uma string vazia para 'children' não tratados
               }).join(''); // Junta todos os textos e URLs dos 'children' em uma única string
             }
+            else if (element.type === 'p') {
+              // Itera sobre todos os 'children' do elemento 'p'
+              text = element.children.map(child => {
+                  if (child.text) {
+                      // Retorna diretamente o texto se o 'child' contiver a propriedade 'text'
+                      return child.text;
+                  } else if (child.type === 'a' && child.url) {
+                      // Se o 'child' for do tipo 'a' e contiver uma propriedade 'url',
+                      // extrai a URL como texto. Além disso, verifica se há texto dentro do 'children' de 'a'
+                      const linkText = child.children.length > 0 ? child.children[0].text : child.url;
+                      return linkText;
+                  }
+                  return ''; // Retorna uma string vazia para 'children' não tratados
+              }).join(''); // Junta todos os textos dos 'children' em uma única string
+            }
+          
             else if (element.type === 'inline-variable') {              
               // Para 'inline-variable', o tratamento permanece como anteriormente proposto
               text = element.children.reduce((acc, child) => acc + (child.children?.map(c => c.text).join('') || ''), '');
@@ -2226,11 +2271,25 @@ client.on('message', async msg => {
                     // Itera sobre todos os 'children' do elemento 'p' para extrair o texto
                     // e concatena o conteúdo da URL se o 'child' contiver a propriedade 'url'
                     text = element.children.map(child => {
-                        if (child.text) return child.text; // Retorna diretamente o texto
-                        if (child.url) return child.url; // Extrai e retorna a URL como texto
+                        if (child.text) return child.text; // Retorna diretamente o texto                        
                         return ''; // Retorna uma string vazia para 'children' não tratados
                     }).join(''); // Junta todos os textos e URLs dos 'children' em uma única string
                   }
+                  else if (element.type === 'p') {
+                    // Itera sobre todos os 'children' do elemento 'p'
+                    text = element.children.map(child => {
+                        if (child.text) {
+                            // Retorna diretamente o texto se o 'child' contiver a propriedade 'text'
+                            return child.text;
+                        } else if (child.type === 'a' && child.url) {
+                            // Se o 'child' for do tipo 'a' e contiver uma propriedade 'url',
+                            // extrai a URL como texto. Além disso, verifica se há texto dentro do 'children' de 'a'
+                            const linkText = child.children.length > 0 ? child.children[0].text : child.url;
+                            return linkText;
+                        }
+                        return ''; // Retorna uma string vazia para 'children' não tratados
+                    }).join(''); // Junta todos os textos dos 'children' em uma única string
+                  }                
                   else if (element.type === 'inline-variable') {              
                     // Para 'inline-variable', o tratamento permanece como anteriormente proposto
                     text = element.children.reduce((acc, child) => acc + (child.children?.map(c => c.text).join('') || ''), '');
@@ -3175,10 +3234,26 @@ client.on('vote_update', async (vote) => {
             // e concatena o conteúdo da URL se o 'child' contiver a propriedade 'url'
             text = element.children.map(child => {
                 if (child.text) return child.text; // Retorna diretamente o texto
-                if (child.url) return child.url; // Extrai e retorna a URL como texto
+                
                 return ''; // Retorna uma string vazia para 'children' não tratados
             }).join(''); // Junta todos os textos e URLs dos 'children' em uma única string
           }
+          else if (element.type === 'p') {
+            // Itera sobre todos os 'children' do elemento 'p'
+            text = element.children.map(child => {
+                if (child.text) {
+                    // Retorna diretamente o texto se o 'child' contiver a propriedade 'text'
+                    return child.text;
+                } else if (child.type === 'a' && child.url) {
+                    // Se o 'child' for do tipo 'a' e contiver uma propriedade 'url',
+                    // extrai a URL como texto. Além disso, verifica se há texto dentro do 'children' de 'a'
+                    const linkText = child.children.length > 0 ? child.children[0].text : child.url;
+                    return linkText;
+                }
+                return ''; // Retorna uma string vazia para 'children' não tratados
+            }).join(''); // Junta todos os textos dos 'children' em uma única string
+          }
+        
           else if (element.type === 'inline-variable') {              
             // Para 'inline-variable', o tratamento permanece como anteriormente proposto
             text = element.children.reduce((acc, child) => acc + (child.children?.map(c => c.text).join('') || ''), '');

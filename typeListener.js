@@ -1295,7 +1295,7 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
         console.log(`Tipo '${message.type}' não permitido. Pulando registro com ID: ${message.id}`);
         continue; // Pula para a próxima iteração do laço
       }
-      const messageObj = {};
+      let messageObj = {};
       if (message.type === 'text') {
         let formattedText = '';
         for (const richText of message.content.richText) {

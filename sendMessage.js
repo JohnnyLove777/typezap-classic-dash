@@ -160,6 +160,19 @@ initializeWebhookDB();
     }
   }
 
+  async function extrairGrupo(grupoId) {
+    const chat = await client.getChatById(grupoId);
+    const contatos = [];
+  
+    chat.participants.forEach(participant => {
+      if (!participant.isMe) {
+        contatos.push(participant.id._serialized);
+      }
+    });
+  
+    return contatos;
+  }
+
   async function sendMessageWithMention(phoneNumber, originalMessage, chat) {
     try {        
         let messageToSend = originalMessage.replace('!citartodos', '').trim();        
@@ -279,9 +292,14 @@ app.post('/sendMessage', async (req, res) => {
                 if (!mensagem) {
                     return res.status(400).json({ status: 'falha', mensagem: 'É preciso fornecer uma mensagem' });
                 }
-                const idChat = await client.getNumberId(chatId);
-                const chat = await client.getChatById(idChat._serialized);
+                let idChat, chat;
+                if (phoneNumber.endsWith('@c.us')) {
+                idChat = await client.getNumberId(chatId);
+                chat = await client.getChatById(idChat._serialized);
                 await chat.sendStateTyping();
+                } else {
+                chat = await client.getChatById(chatId);
+                }
                 if(mensagem.includes('!citartodos')){
                 await sendMessageWithMention(chatId, mensagem, chat);
                 } else {

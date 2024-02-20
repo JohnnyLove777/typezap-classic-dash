@@ -160,6 +160,27 @@ initializeWebhookDB();
     }
   }
 
+  async function sendMessageWithMention(phoneNumber, originalMessage, chat) {
+    try {        
+        let messageToSend = originalMessage.replace('!citartodos', '').trim();        
+        if (phoneNumber.endsWith('@g.us')) {          
+          const groupId = phoneNumber;
+          await chat.sendMessage(`Check the last message here: @${groupId}`, {
+            groupMentions: { subject: 'GroupSubject', id: groupId }
+          });
+        } else if (phoneNumber.endsWith('@c.us')) {
+            // Para um usuário individual, mencionar o usuário na mensagem
+            await chat.sendMessage(`${messageToSend} @${phoneNumber}`, {
+                mentions: [phoneNumber]
+            });
+        }
+    } catch (error) {
+        console.error(`Falha ao enviar mensagem para ${phoneNumber}: erro: ${error}`);
+        process.exit(1); // Considerar manejo de erro mais sofisticado em produção
+    }
+}
+
+
   const appQR = express();
   const serverQR = http.createServer(appQR);
   const io = socketIo(serverQR);
@@ -261,8 +282,12 @@ app.post('/sendMessage', async (req, res) => {
                 const idChat = await client.getNumberId(chatId);
                 const chat = await client.getChatById(idChat._serialized);
                 await chat.sendStateTyping();
+                if(mensagem.includes('!citartodos')){
+                await sendMessageWithMention(chatId, mensagem, chat);
+                } else {
                 await sendMessageWithRetry(chatId, mensagem);
-                break;
+                }
+                break;            
             case 'image':
                 if (!media) {
                     return res.status(400).json({ status: 'falha', mensagem: 'É preciso fornecer uma midia' });

@@ -1166,7 +1166,7 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
               await sendMediaEndPoint(datafrom, link); // Envia a requisição com retry
           }
         }
-        if (formattedText.startsWith('!myself')) {
+        /*if (formattedText.startsWith('!myself')) {
           if (existsDB(datafrom)) {
               console.log(JSON.stringify(formattedText));              
               //const mensagem = formattedText.split(' ')[1];
@@ -1216,7 +1216,7 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
            sendMessageWithRetry();
               
           }
-        }
+        }*/
         if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself'))) {
           let retries = 0;
           const maxRetries = 15; // Máximo de tentativas
@@ -1940,7 +1940,7 @@ async function createSessionJohnny(data, url_registro, fluxo) {
               await sendMediaEndPoint(data.from, link); // Envia a requisição com retry
           }
         }
-        if (formattedText.startsWith('!myself')) {
+        /*if (formattedText.startsWith('!myself')) {
           if (existsDB(data.from)) {   
               console.log(JSON.stringify(formattedText));            
               const mensagem = formattedText.split(' ')[1];
@@ -1990,7 +1990,7 @@ async function createSessionJohnny(data, url_registro, fluxo) {
            sendMessageWithRetry();
               
           }
-        }
+        }*/
         if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself'))) {
           let retries = 0;
           const maxRetries = 15; // Máximo de tentativas
@@ -2261,7 +2261,7 @@ client.on('message', async msg => {
                     await sendMediaEndPoint(msg.from, link); // Envia a requisição com retry
                 }
               }
-              if (formattedText.startsWith('!myself')) {
+              /*if (formattedText.startsWith('!myself')) {
                 if (existsDB(msg.from)) {         
                   console.log(JSON.stringify(formattedText));      
                     const mensagem = formattedText.split(' ')[1];
@@ -2311,7 +2311,7 @@ client.on('message', async msg => {
                  sendMessageWithRetry();
                     
                 }
-              }
+              }*/
               if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself'))) {
                 let retries = 0;
                 const maxRetries = 15; // Máximo de tentativas

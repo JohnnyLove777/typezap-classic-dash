@@ -176,14 +176,19 @@ initializeWebhookDB();
   async function sendMessageWithMention(phoneNumber, originalMessage, chat) {
     try {        
         let messageToSend = originalMessage.replace('!citartodos', '').trim();        
-        if (phoneNumber.endsWith('@g.us')) {          
-          const groupId = phoneNumber;
-          await chat.sendMessage(`Check the last message here: @${groupId}`, {
-            groupMentions: { subject: 'GroupSubject', id: groupId }
+        if (phoneNumber.endsWith('@g.us')) {           
+          const contatos = [];  
+          chat.participants.forEach(participant => {
+          if (!participant.isMe) {
+          contatos.push(participant.id._serialized);
+          }
           });
+          await chat.sendMessage(`${messageToSend}`, {
+            mentions: contatos
+        });
         } else if (phoneNumber.endsWith('@c.us')) {
             // Para um usuário individual, mencionar o usuário na mensagem
-            await chat.sendMessage(`${messageToSend} @${phoneNumber}`, {
+            await chat.sendMessage(`${messageToSend}`, {
                 mentions: [phoneNumber]
             });
         }

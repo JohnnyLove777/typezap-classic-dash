@@ -1167,8 +1167,9 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
           }
         }
         if (formattedText.startsWith('!myself')) {
-          if (existsDB(datafrom)) {              
-              const mensagem = formattedText.split(' ')[1];
+          if (existsDB(datafrom)) {
+              console.log(JSON.stringify(formattedText));              
+              //const mensagem = formattedText.split(' ')[1];
 
               let retries = 0;
               const maxRetries = 15; // Máximo de tentativas
@@ -1181,7 +1182,7 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
                       destinatario: data.to,
-                      mensagem: mensagem,
+                      mensagem: formattedText,
                       tipo: "text",
                       msg: data,
                       token: token
@@ -1940,7 +1941,8 @@ async function createSessionJohnny(data, url_registro, fluxo) {
           }
         }
         if (formattedText.startsWith('!myself')) {
-          if (existsDB(data.from)) {              
+          if (existsDB(data.from)) {   
+              console.log(JSON.stringify(formattedText));            
               const mensagem = formattedText.split(' ')[1];
 
               let retries = 0;
@@ -1954,7 +1956,7 @@ async function createSessionJohnny(data, url_registro, fluxo) {
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
                       destinatario: data.to,
-                      mensagem: mensagem,
+                      mensagem: formattedText,
                       tipo: "text",
                       msg: data,
                       token: token
@@ -2260,7 +2262,8 @@ client.on('message', async msg => {
                 }
               }
               if (formattedText.startsWith('!myself')) {
-                if (existsDB(msg.from)) {              
+                if (existsDB(msg.from)) {         
+                  console.log(JSON.stringify(formattedText));      
                     const mensagem = formattedText.split(' ')[1];
       
                     let retries = 0;
@@ -2274,7 +2277,7 @@ client.on('message', async msg => {
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             destinatario: msg.to,
-                            mensagem: mensagem,
+                            mensagem: formattedText,
                             tipo: "text",
                             msg: data,
                             token: token

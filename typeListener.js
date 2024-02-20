@@ -1668,7 +1668,6 @@ async function processGroupMessages(groupID, isFirstRun = true) {
         return;
     }
   
-    // Ajuste para pular a primeira mensagem de espera somente na primeira execução
     if (isFirstRun && groupConfig.nextIndex === 0 && groupConfig.messages.length > 1) {
         groupConfig.nextIndex = 1;
     }
@@ -1678,7 +1677,7 @@ async function processGroupMessages(groupID, isFirstRun = true) {
   
     if (currentTime >= nextDispatchTime) {
         if (groupConfig.nextIndex >= groupConfig.messages.length) {
-            groupConfig.nextIndex = 0; // Resetar o índice se ele exceder o comprimento do array
+            groupConfig.nextIndex = 0;
         }
   
         const messageObj = groupConfig.messages[groupConfig.nextIndex];
@@ -1689,8 +1688,9 @@ async function processGroupMessages(groupID, isFirstRun = true) {
         } else if (messageObj && messageObj.type === 'text') {
             await sendRequest(groupID, messageObj.content, 'text');              
         } else if (messageObj && ['image', 'video', 'audio'].includes(messageObj.type)) {
-            // Substituição direta pela URL contida em messageObj.content.url
-            await sendMediaEndPoint(groupID, messageObj.content.url); // Omitindo a porta, assumindo o padrão
+            // Acesso correto ao URL aninhado
+            const mediaUrl = messageObj.content.content.url; // ajuste aqui
+            await sendMediaEndPoint(groupID, mediaUrl); // Usando a variável correta
         } else {
             console.error('Tipo de mensagem não suportado');
         }

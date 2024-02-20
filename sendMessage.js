@@ -293,7 +293,7 @@ app.post('/sendMessage', async (req, res) => {
                     return res.status(400).json({ status: 'falha', mensagem: 'É preciso fornecer uma mensagem' });
                 }
                 let idChat, chat;
-                if (phoneNumber.endsWith('@c.us')) {
+                if (chatId.endsWith('@c.us')) {
                 idChat = await client.getNumberId(chatId);
                 chat = await client.getChatById(idChat._serialized);
                 await chat.sendStateTyping();

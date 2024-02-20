@@ -347,7 +347,7 @@ app.post('/media', async (req, res) => {
       const extension = path.extname(filePath).toLowerCase();
       const audioExtensions = ['.mp3', '.wav', '.ogg', '.opus'];
 
-      if (audioExtensions.includes(extension)) {
+      if (audioExtensions.includes(extension) && destinatario.endsWith('@c.us')) {
         // Se a mídia é áudio, então obtém o ID do destinatário.
         const destinatarioId = await client.getNumberId(destinatario);
     

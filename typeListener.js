@@ -65,7 +65,7 @@ async function sendMessage(phoneNumber, messageToSend) {
 
 const delay = ms => new Promise(res => setTimeout(res, ms));
 
-console.log("Bem-vindo ao TypeZap 1.0 - A Integração mais completa Typebot + Whatsapp!");
+console.log("Bem-vindo ao TypeZap 1.3 - A Integração mais completa Typebot + Whatsapp!");
 console.log(`Nome da sessão: ${sessao}`);
 
 // Listener WebSocket do frontend
@@ -625,6 +625,12 @@ function readMapSystem(url_chat) {
 
 function readURL(indice) {
   const dadosAtuais = readJSONFile(DATABASE_FILE_SYSTEM);
+
+  // Verifica se DATABASE_FILE_SYSTEM é não vazio
+  if (!dadosAtuais || dadosAtuais.length === 0) {
+    console.error('O arquivo de dados está vazio.');
+    return null;
+  }
 
   // Verifica se o índice é válido
   if (indice < 0 || indice >= dadosAtuais.length) {

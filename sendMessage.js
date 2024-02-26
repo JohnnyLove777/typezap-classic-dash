@@ -346,6 +346,27 @@ app.post('/sendMessage', async (req, res) => {
     }
 });
 
+// Endpoint /extensaoTypezap
+app.post('/extensaoTypezap', async (req, res) => {
+  const { token } = req.body;
+
+  // Verifica se o token fornecido é válido
+  if (token !== SECURITY_TOKEN) {
+      return res.status(401).json({ status: 'falha', mensagem: 'Token inválido' });
+  }
+
+  try {
+      // Obtém os registros do banco de dados
+      const dbTriggers = listAllFromDBTypebotV2();
+      
+      // Responde com os registros obtidos
+      res.status(200).json(dbTriggers);
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ status: 'falha', mensagem: 'Erro ao obter dados do banco de dados' });
+  }
+});
+
 // Metodo /media
 
 // Função auxiliar para baixar arquivos

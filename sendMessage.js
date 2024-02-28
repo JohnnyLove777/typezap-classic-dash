@@ -367,36 +367,6 @@ app.post('/extensaoTypezap', async (req, res) => {
   }
 });
 
-// Função para extrair o número e nome de cada chat
-async function extractChatDetails(chats) {
-  return chats.map(chat => ({
-      numero: chat.id._serialized,
-      nome: chat.name
-  }));
-}
-
-// Endpoint /chatsAtivos
-app.post('/chatsAtivos', async (req, res) => {
-  const { token } = req.body;
-
-  // Verifica se o token fornecido é válido
-  if (token !== SECURITY_TOKEN) {
-    return res.status(401).json({ status: 'falha', mensagem: 'Token inválido' });
-  }
-
-  try {
-      // Obtém os chats ativos
-      const chats = await getChats(); // Esta função deve ser fornecida pela whatsapp-web.js
-      const chatDetails = await extractChatDetails(chats);
-
-      // Responde com os detalhes dos chats
-      res.status(200).json({ status: 'sucesso', chats: chatDetails });
-  } catch (error) {
-      console.error(error);
-      res.status(500).json({ status: 'falha', mensagem: 'Erro ao obter chats ativos' });
-  }
-});
-
 // Metodo /media
 
 // Função auxiliar para baixar arquivos

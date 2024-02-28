@@ -570,10 +570,12 @@ function createFolderIfNotExists(folderPath) {
 }
 
 // Caminhos das pastas
-const leadsPath = path.join(__dirname, 'leadslista')
+const leadsPath = path.join(__dirname, 'leadslista');
+const registroPath = path.join(__dirname, 'registrolista');
 
 // Criar as pastas
 createFolderIfNotExists(leadsPath);
+createFolderIfNotExists(registroPath);
 
 //Fim do mecanismo para criar pasta
 

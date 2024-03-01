@@ -1173,7 +1173,7 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
               const link = formattedText.split(' ')[1];
               await sendMediaEndPoint(datafrom, link); // Envia a requisição com retry
           }
-        }
+        }        
         /*if (formattedText.startsWith('!myself')) {
           if (existsDB(datafrom)) {
               console.log(JSON.stringify(formattedText));              
@@ -1225,7 +1225,7 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
               
           }
         }*/
-        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself'))) {
+        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.'))) {
           let retries = 0;
           const maxRetries = 15; // Máximo de tentativas
           let delay = init_delay; // Tempo inicial de espera em milissegundos
@@ -1999,7 +1999,7 @@ async function createSessionJohnny(data, url_registro, fluxo) {
               
           }
         }*/
-        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself'))) {
+        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.'))) {
           let retries = 0;
           const maxRetries = 15; // Máximo de tentativas
           let delay = init_delay; // Tempo inicial de espera em milissegundos
@@ -2320,7 +2320,7 @@ client.on('message', async msg => {
                     
                 }
               }*/
-              if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself'))) {
+              if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.'))) {
                 let retries = 0;
                 const maxRetries = 15; // Máximo de tentativas
                 let delay = init_delay; // Tempo inicial de espera em milissegundos                           
@@ -2511,6 +2511,11 @@ function scheduleAction(dataFutura, url, name, msgfrom, msg) {
 let system_aux = false;
 
 client.on('message_create', async (msg) => {
+
+  // Comando ping
+  if (msg.fromMe && msg.body.startsWith('!ping') && msg.to === msg.from) {  
+    await sendRequest(msg.from, `Pong`, "text");    
+  } 
 
   // Comandos do central de controle
   if (msg.fromMe && msg.body.startsWith('!help') && msg.to === msg.from) {        
@@ -3213,7 +3218,7 @@ client.on('vote_update', async (vote) => {
             await sendMediaEndPoint(vote.voter, link); // Envia a requisição com retry
         }
       }
-      if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media'))) {
+      if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('Invalid message. Please, try again.'))) {
         let retries = 0;
         const maxRetries = 15; // Máximo de tentativas
         let delay = init_delay; // Tempo inicial de espera em milissegundos                           

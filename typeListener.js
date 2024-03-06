@@ -1074,6 +1074,41 @@ function readJSONFileTypebotV2(filename) {
 function writeJSONFileTypebotV2(filename, data) {
     fs.writeFileSync(filename, JSON.stringify(data, null, 2));
 }
+
+//Função agendamento de resposta rápida
+
+const scheduleQuickResponse = (hours, recipient, triggerPhrase) => {
+  const currentTime = new Date();
+  const futureTime = new Date(currentTime.getTime() + hours * 3600000);
+
+  const delayInMilliseconds = futureTime.getTime() - currentTime.getTime();
+
+  setTimeout(async () => {
+    try {
+      const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          destinatario: recipient,
+          mensagem: triggerPhrase,
+          tipo: "text",
+          token: token // Garanta que token esteja definido corretamente
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+
+      const jsonResponse = await response.json();
+      console.log(`Resposta rápida enviada com sucesso: ${JSON.stringify(jsonResponse)}`);
+    } catch (error) {
+      console.error(`Erro ao enviar resposta rápida: ${error.message}`);
+    }
+  }, delayInMilliseconds);
+};
+
+//Fimda função agendamento Resposta Rápida
 // teste reinit
 
 async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
@@ -1225,7 +1260,22 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
               
           }
         }*/
-        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.'))) {
+      if (formattedText.startsWith('!rapidaagendada')) {          
+          if (existsDB(datafrom)) {              
+              const args = formattedText.slice('!rapidaagendada'.length).trim().split(/\s+/);              
+              const hours = parseFloat(args[0]);              
+              const triggerMessage = args.slice(1).join(' ');      
+              if (!isNaN(hours) && triggerMessage) {                  
+                  scheduleQuickResponse(hours, datafrom, triggerMessage);
+                  console.log('Resposta rápida agendada com sucesso.');
+              } else {
+                  console.error('Erro: Argumentos inválidos para o comando !rapidaagendada.');
+              }
+          } else {
+              console.log('Destinatário não encontrado no banco de dados.');
+          }
+      }      
+        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada'))) {
           let retries = 0;
           const maxRetries = 15; // Máximo de tentativas
           let delay = init_delay; // Tempo inicial de espera em milissegundos
@@ -1999,7 +2049,22 @@ async function createSessionJohnny(data, url_registro, fluxo) {
               
           }
         }*/
-        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.'))) {
+        if (formattedText.startsWith('!rapidaagendada')) {          
+          if (existsDB(data.from)) {              
+              const args = formattedText.slice('!rapidaagendada'.length).trim().split(/\s+/);              
+              const hours = parseFloat(args[0]);              
+              const triggerMessage = args.slice(1).join(' ');      
+              if (!isNaN(hours) && triggerMessage) {                  
+                  scheduleQuickResponse(hours, data.from, triggerMessage);
+                  console.log('Resposta rápida agendada com sucesso.');
+              } else {
+                  console.error('Erro: Argumentos inválidos para o comando !rapidaagendada.');
+              }
+          } else {
+              console.log('Destinatário não encontrado no banco de dados.');
+          }
+      }      
+        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada'))) {
           let retries = 0;
           const maxRetries = 15; // Máximo de tentativas
           let delay = init_delay; // Tempo inicial de espera em milissegundos
@@ -2320,7 +2385,22 @@ client.on('message', async msg => {
                     
                 }
               }*/
-              if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.'))) {
+              if (formattedText.startsWith('!rapidaagendada')) {          
+                if (existsDB(msg.from)) {              
+                    const args = formattedText.slice('!rapidaagendada'.length).trim().split(/\s+/);              
+                    const hours = parseFloat(args[0]);              
+                    const triggerMessage = args.slice(1).join(' ');      
+                    if (!isNaN(hours) && triggerMessage) {                  
+                        scheduleQuickResponse(hours, msg.from, triggerMessage);
+                        console.log('Resposta rápida agendada com sucesso.');
+                    } else {
+                        console.error('Erro: Argumentos inválidos para o comando !rapidaagendada.');
+                    }
+                } else {
+                    console.log('Destinatário não encontrado no banco de dados.');
+                }
+            }      
+              if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada'))) {
                 let retries = 0;
                 const maxRetries = 15; // Máximo de tentativas
                 let delay = init_delay; // Tempo inicial de espera em milissegundos                           
@@ -3218,7 +3298,22 @@ client.on('vote_update', async (vote) => {
             await sendMediaEndPoint(vote.voter, link); // Envia a requisição com retry
         }
       }
-      if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('Invalid message. Please, try again.'))) {
+      if (formattedText.startsWith('!rapidaagendada')) {          
+        if (existsDB(vote.voter)) {              
+            const args = formattedText.slice('!rapidaagendada'.length).trim().split(/\s+/);              
+            const hours = parseFloat(args[0]);              
+            const triggerMessage = args.slice(1).join(' ');      
+            if (!isNaN(hours) && triggerMessage) {                  
+                scheduleQuickResponse(hours, vote.voter, triggerMessage);
+                console.log('Resposta rápida agendada com sucesso.');
+            } else {
+                console.error('Erro: Argumentos inválidos para o comando !rapidaagendada.');
+            }
+        } else {
+            console.log('Destinatário não encontrado no banco de dados.');
+        }
+    }      
+      if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada'))) {
         let retries = 0;
         const maxRetries = 15; // Máximo de tentativas
         let delay = init_delay; // Tempo inicial de espera em milissegundos                           

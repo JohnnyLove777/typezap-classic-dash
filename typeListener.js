@@ -1074,6 +1074,7 @@ function readJSONFileTypebotV2(filename) {
 function writeJSONFileTypebotV2(filename, data) {
     fs.writeFileSync(filename, JSON.stringify(data, null, 2));
 }
+
 // teste reinit
 
 async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
@@ -1225,7 +1226,36 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
               
           }
         }*/
-        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.'))) {
+      if (formattedText.startsWith('!rapidaagendada')) {          
+          if (existsDB(datafrom)) {              
+              const args = formattedText.slice('!rapidaagendada'.length).trim().split(/\s+/);              
+              const hours = parseFloat(args[0]);              
+              const triggerMessage = args.slice(1).join(' ');      
+              if (!isNaN(hours) && triggerMessage) {                  
+                  scheduleQuickResponse(hours, datafrom, triggerMessage);
+                  console.log('Resposta rápida agendada com sucesso.');
+
+                  const recipient = datafrom; // Número do destinatário
+                  const scheduledDateTime = new Date(); // Configura para uma data/hora específica
+                  scheduledDateTime.setHours(scheduledDateTime.getHours() + hours); // Agendando para 1 hora a partir de agora
+                  const triggerPhrase = triggerMessage;
+
+                  // Objeto de configuração do agendamento
+                  const agendamentoConfig = {
+                   scheduledDateTime, // A data/hora que você calculou
+                   triggerPhrase // A mensagem que você deseja enviar
+                  };
+
+                  // Adicionando o objeto ao banco de dados V6
+                  addToDBTypebotV6(recipient, agendamentoConfig);
+              } else {
+                  console.error('Erro: Argumentos inválidos para o comando !rapidaagendada.');
+              }
+          } else {
+              console.log('Destinatário não encontrado no banco de dados.');
+          }
+      }      
+        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada'))) {
           let retries = 0;
           const maxRetries = 15; // Máximo de tentativas
           let delay = init_delay; // Tempo inicial de espera em milissegundos
@@ -1652,6 +1682,135 @@ function listAllFromDBTypebotV5() {
   return Object.keys(db);
 }
 
+// Rotinas de Disparos Agendados de Respostas Rápidas (Futuro novo remarketing)
+
+const DATABASE_FILE_TYPEBOT_V6 = 'typebotDBV6.json';
+
+function initializeDBTypebotV6() {
+  if (!fs.existsSync(DATABASE_FILE_TYPEBOT_V6)) {
+    const db = {};
+    writeJSONFileTypebotV6(DATABASE_FILE_TYPEBOT_V6, db);
+  } else {
+    const db = readJSONFileTypebotV6(DATABASE_FILE_TYPEBOT_V6);
+
+    Object.keys(db).forEach(recipient => {
+      db[recipient].forEach(quickResponseConfig => {
+        const scheduledDateTime = new Date(quickResponseConfig.scheduledDateTime);
+        if (scheduledDateTime > new Date()) {
+          scheduleQuickResponseWithDate(scheduledDateTime, recipient, quickResponseConfig.triggerPhrase);
+        }
+      });
+    });
+  }
+}
+
+function addToDBTypebotV6(recipient, quickResponseConfig) {
+  const db = readJSONFileTypebotV6(DATABASE_FILE_TYPEBOT_V6);
+  if (!db[recipient]) {
+    db[recipient] = [];
+  }
+  db[recipient].push({
+    ...quickResponseConfig,
+    scheduledDateTime: quickResponseConfig.scheduledDateTime.toISOString()
+  });
+  writeJSONFileTypebotV6(DATABASE_FILE_TYPEBOT_V6, db);
+}
+
+function removeFromDBTypebotV6(recipient, scheduledDateTime) {
+  const db = readJSONFileTypebotV6(DATABASE_FILE_TYPEBOT_V6);
+  if (db[recipient]) {
+    db[recipient] = db[recipient].filter(config => new Date(config.scheduledDateTime).getTime() !== new Date(scheduledDateTime).getTime());
+    writeJSONFileTypebotV6(DATABASE_FILE_TYPEBOT_V6, db);
+  }
+}
+
+function readJSONFileTypebotV6(filename) {
+  try {
+    return JSON.parse(fs.readFileSync(filename, 'utf8'));
+  } catch (error) {
+    console.error('Error reading the database file:', error);
+    return {};
+  }
+}
+
+function writeJSONFileTypebotV6(filename, data) {
+  fs.writeFileSync(filename, JSON.stringify(data, null, 2), 'utf8');
+}
+
+const scheduleQuickResponseWithDate = (scheduledDateTime, recipient, triggerPhrase) => {
+  const currentTime = new Date();
+  const targetTime = new Date(scheduledDateTime);
+
+  // Calcula a diferença de tempo em milissegundos
+  const delayInMilliseconds = targetTime.getTime() - currentTime.getTime();
+
+  if (delayInMilliseconds < 0) {
+    console.log("Data/hora agendada já passou. Disparo não será agendado.");
+    return; // Finaliza a função se a data/hora agendada já tiver passado
+  }
+
+  setTimeout(async () => {
+    try {
+      const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          destinatario: recipient,
+          mensagem: triggerPhrase,
+          tipo: "text",
+          token: token // Assume que 'token' esteja definido corretamente no seu escopo
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+
+      const jsonResponse = await response.json();
+      console.log(`Resposta rápida enviada com sucesso: ${JSON.stringify(jsonResponse)}`);
+    } catch (error) {
+      console.error(`Erro ao enviar resposta rápida para a data/hora agendada: ${error.message}`);
+    }
+  }, delayInMilliseconds);
+};
+
+//Função agendamento de resposta rápida
+
+const scheduleQuickResponse = (hours, recipient, triggerPhrase) => {
+  const currentTime = new Date();
+  const futureTime = new Date(currentTime.getTime() + hours * 3600000);
+
+  const delayInMilliseconds = futureTime.getTime() - currentTime.getTime();
+
+  setTimeout(async () => {
+    try {
+      const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          destinatario: recipient,
+          mensagem: triggerPhrase,
+          tipo: "text",
+          token: token // Garanta que token esteja definido corretamente
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+
+      const jsonResponse = await response.json();
+      console.log(`Resposta rápida enviada com sucesso: ${JSON.stringify(jsonResponse)}`);
+    } catch (error) {
+      console.error(`Erro ao enviar resposta rápida: ${error.message}`);
+    }
+  }, delayInMilliseconds);
+};
+
+//Fimda função agendamento Resposta Rápida
+
+//Fim das rotinas V6 de disparo agendado de resposta rápida
+
 function groupIDExistsInV5(groupID) {
   const db = readJSONFileTypebotV5(DATABASE_FILE_TYPEBOT_V5);
   return db.hasOwnProperty(groupID);
@@ -1999,7 +2158,36 @@ async function createSessionJohnny(data, url_registro, fluxo) {
               
           }
         }*/
-        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.'))) {
+        if (formattedText.startsWith('!rapidaagendada')) {          
+          if (existsDB(data.from)) {              
+              const args = formattedText.slice('!rapidaagendada'.length).trim().split(/\s+/);              
+              const hours = parseFloat(args[0]);              
+              const triggerMessage = args.slice(1).join(' ');      
+              if (!isNaN(hours) && triggerMessage) {                  
+                  scheduleQuickResponse(hours, data.from, triggerMessage);
+                  console.log('Resposta rápida agendada com sucesso.');
+
+                  const recipient = data.from; // Número do destinatário
+                  const scheduledDateTime = new Date(); // Configura para uma data/hora específica
+                  scheduledDateTime.setHours(scheduledDateTime.getHours() + hours); // Agendando para 1 hora a partir de agora
+                  const triggerPhrase = triggerMessage;
+
+                  // Objeto de configuração do agendamento
+                  const agendamentoConfig = {
+                   scheduledDateTime, // A data/hora que você calculou
+                   triggerPhrase // A mensagem que você deseja enviar
+                  };
+
+                  // Adicionando o objeto ao banco de dados V6
+                  addToDBTypebotV6(recipient, agendamentoConfig);
+              } else {
+                  console.error('Erro: Argumentos inválidos para o comando !rapidaagendada.');
+              }
+          } else {
+              console.log('Destinatário não encontrado no banco de dados.');
+          }
+      }      
+        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada'))) {
           let retries = 0;
           const maxRetries = 15; // Máximo de tentativas
           let delay = init_delay; // Tempo inicial de espera em milissegundos
@@ -2136,6 +2324,8 @@ initializeDBTypebotV3();
 initializeDBTypebotV4();
 // Inicializando banco de dados dos disparos para grupos
 initializeDBTypebotV5();
+// Inicializando banco de dados dos disparos agendados de respsotas rapidas (Novo Remarketing)
+initializeDBTypebotV6();
 
 client.on("disconnected", async (reason) => {
   try {
@@ -2320,7 +2510,36 @@ client.on('message', async msg => {
                     
                 }
               }*/
-              if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.'))) {
+              if (formattedText.startsWith('!rapidaagendada')) {          
+                if (existsDB(msg.from)) {              
+                    const args = formattedText.slice('!rapidaagendada'.length).trim().split(/\s+/);              
+                    const hours = parseFloat(args[0]);              
+                    const triggerMessage = args.slice(1).join(' ');      
+                    if (!isNaN(hours) && triggerMessage) {                  
+                        scheduleQuickResponse(hours, msg.from, triggerMessage);
+                        console.log('Resposta rápida agendada com sucesso.');
+
+                        const recipient = msg.from; // Número do destinatário
+                        const scheduledDateTime = new Date(); // Configura para uma data/hora específica
+                        scheduledDateTime.setHours(scheduledDateTime.getHours() + hours); // Agendando para 1 hora a partir de agora
+                        const triggerPhrase = triggerMessage;
+
+                        // Objeto de configuração do agendamento
+                        const agendamentoConfig = {
+                        scheduledDateTime, // A data/hora que você calculou
+                        triggerPhrase // A mensagem que você deseja enviar
+                        };
+
+                        // Adicionando o objeto ao banco de dados V6
+                        addToDBTypebotV6(recipient, agendamentoConfig);
+                    } else {
+                        console.error('Erro: Argumentos inválidos para o comando !rapidaagendada.');
+                    }
+                } else {
+                    console.log('Destinatário não encontrado no banco de dados.');
+                }
+            }      
+              if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada'))) {
                 let retries = 0;
                 const maxRetries = 15; // Máximo de tentativas
                 let delay = init_delay; // Tempo inicial de espera em milissegundos                           
@@ -3218,7 +3437,36 @@ client.on('vote_update', async (vote) => {
             await sendMediaEndPoint(vote.voter, link); // Envia a requisição com retry
         }
       }
-      if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('Invalid message. Please, try again.'))) {
+      if (formattedText.startsWith('!rapidaagendada')) {          
+        if (existsDB(vote.voter)) {              
+            const args = formattedText.slice('!rapidaagendada'.length).trim().split(/\s+/);              
+            const hours = parseFloat(args[0]);              
+            const triggerMessage = args.slice(1).join(' ');      
+            if (!isNaN(hours) && triggerMessage) {                  
+                scheduleQuickResponse(hours, vote.voter, triggerMessage);
+                console.log('Resposta rápida agendada com sucesso.');
+
+                const recipient = vote.voter; // Número do destinatário
+                  const scheduledDateTime = new Date(); // Configura para uma data/hora específica
+                  scheduledDateTime.setHours(scheduledDateTime.getHours() + hours); // Agendando para 1 hora a partir de agora
+                  const triggerPhrase = triggerMessage;
+
+                  // Objeto de configuração do agendamento
+                  const agendamentoConfig = {
+                   scheduledDateTime, // A data/hora que você calculou
+                   triggerPhrase // A mensagem que você deseja enviar
+                  };
+
+                  // Adicionando o objeto ao banco de dados V6
+                  addToDBTypebotV6(recipient, agendamentoConfig);
+            } else {
+                console.error('Erro: Argumentos inválidos para o comando !rapidaagendada.');
+            }
+        } else {
+            console.log('Destinatário não encontrado no banco de dados.');
+        }
+    }      
+      if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada'))) {
         let retries = 0;
         const maxRetries = 15; // Máximo de tentativas
         let delay = init_delay; // Tempo inicial de espera em milissegundos                           

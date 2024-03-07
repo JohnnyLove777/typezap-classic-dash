@@ -1107,8 +1107,12 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
 
     const messages = response.data.messages;
 
+    if(existsDB(datafrom)){
+      deleteObject(datafrom);
+    }
+
     if (!existsDB(datafrom)) {
-      addObject(datafrom, 'sessaonaoexistente', datafrom.replace(/\D/g, ''), JSON.stringify(data.id.id), 'typing', fluxo, false, "active", db_length);
+      addObject(datafrom, response.data.sessionId, datafrom.replace(/\D/g, ''), JSON.stringify(data.id.id), 'done', fluxo, false, "active", db_length);
     }
     
     if(datafrom.endsWith('@c.us')){
@@ -1390,9 +1394,7 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
         processGroupMessages(datafrom, isFirstRun = true);
     }
   }
-    if (!existsDB(datafrom)) {
-      addObject(datafrom, response.data.sessionId, datafrom.replace(/\D/g, ''), JSON.stringify(data.id.id), 'done', fluxo, false, "active", db_length);
-    }
+    
     if(existsDB(datafrom)){
       updateSessionId(datafrom, response.data.sessionId);
       updateId(datafrom, JSON.stringify(data.id.id));

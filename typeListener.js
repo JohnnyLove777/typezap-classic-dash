@@ -1248,6 +1248,7 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
 
                   // Adicionando o objeto ao banco de dados V6
                   addToDBTypebotV6(recipient, agendamentoConfig);
+                  deleteObject(datafrom);
               } else {
                   console.error('Erro: Argumentos inválidos para o comando !rapidaagendada.');
               }
@@ -1779,11 +1780,11 @@ const scheduleQuickResponseWithDate = (scheduledDateTime, recipient, triggerPhra
 
 //Função agendamento de resposta rápida
 
-const scheduleQuickResponse = (scheduledDateTime, recipient, triggerPhrase) => {
+const scheduleQuickResponse = (hours, recipient, triggerPhrase) => {
   const currentTime = new Date();
-  const targetTime = new Date(scheduledDateTime);
+  const futureTime = new Date(currentTime.getTime() + hours * 3600000);
 
-  const delayInMilliseconds = targetTime.getTime() - currentTime.getTime();
+  const delayInMilliseconds = futureTime.getTime() - currentTime.getTime();
 
   setTimeout(async () => {
     try {
@@ -1804,9 +1805,8 @@ const scheduleQuickResponse = (scheduledDateTime, recipient, triggerPhrase) => {
 
       const jsonResponse = await response.json();
       console.log(`Resposta rápida enviada com sucesso: ${JSON.stringify(jsonResponse)}`);
-
-      // Após o envio bem-sucedido, remove o registro do banco de dados
-      removeFromDBTypebotV6(recipient, scheduledDateTime);
+      
+      removeFromDBTypebotV6(recipient, futureTime.toISOString());
     } catch (error) {
       console.error(`Erro ao enviar resposta rápida: ${error.message}`);
     }
@@ -2186,6 +2186,7 @@ async function createSessionJohnny(data, url_registro, fluxo) {
 
                   // Adicionando o objeto ao banco de dados V6
                   addToDBTypebotV6(recipient, agendamentoConfig);
+                  deleteObject(data.from);
               } else {
                   console.error('Erro: Argumentos inválidos para o comando !rapidaagendada.');
               }
@@ -2561,6 +2562,7 @@ client.on('message', async msg => {
 
                         // Adicionando o objeto ao banco de dados V6
                         addToDBTypebotV6(recipient, agendamentoConfig);
+                        deleteObject(msg.from);
                     } else {
                         console.error('Erro: Argumentos inválidos para o comando !rapidaagendada.');
                     }
@@ -3488,6 +3490,7 @@ client.on('vote_update', async (vote) => {
 
                   // Adicionando o objeto ao banco de dados V6
                   addToDBTypebotV6(recipient, agendamentoConfig);
+                  deleteObject(vote.voter);
             } else {
                 console.error('Erro: Argumentos inválidos para o comando !rapidaagendada.');
             }

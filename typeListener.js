@@ -1112,7 +1112,7 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
     }
 
     if (!existsDB(datafrom)) {
-      addObject(datafrom, response.data.sessionId, datafrom.replace(/\D/g, ''), JSON.stringify(data.id.id), 'done', fluxo, false, "active", db_length);
+      addObject(datafrom, response.data.sessionId, datafrom.replace(/\D/g, ''), JSON.stringify(data.id.id), 'typing', fluxo, false, "active", db_length);
     }
     
     if(datafrom.endsWith('@c.us')){

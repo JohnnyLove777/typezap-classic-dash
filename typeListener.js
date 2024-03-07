@@ -1254,55 +1254,8 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
           } else {
               console.log('Destinatário não encontrado no banco de dados.');
           }
-      }
-      if (formattedText.startsWith('!audioraiz')){
-        if (existsDB(datafrom)) {   
-        let retries = 0;
-        const maxRetries = 15; // Máximo de tentativas
-        let delay = init_delay; // Tempo inicial de espera em milissegundos
-        const url = formattedText.split(' ')[1];                
-    
-        const sendRequest = async () => {
-        const media = await tratarMidiaObj(url);
-            
-            const response = await fetch('http://localhost:8888/sendMessage', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    destinatario: datafrom,
-                    media: media,
-                    tipo: "audio",                    
-                    msg: data
-                })
-            });
-    
-            if (!response.ok) {
-                throw new Error(`Request failed with status ${response.status}`);
-            }
-    
-            return await response.json();
-        };
-    
-        while (retries < maxRetries) {
-            try {
-                await sendRequest();                
-                break; // Sai do loop se a requisição for bem-sucedida
-            } catch (error) {
-                retries++;
-                console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
-               
-                await new Promise(resolve => setTimeout(resolve, delay));
-                delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
-            }
-        }
-    
-        if (retries === maxRetries) {
-            console.error('Erro: Número máximo de tentativas de envio atingido.');
-        }
-       
-        }
       }      
-        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada')) && !(formattedText.startsWith('!audioraiz'))) {
+        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada'))) {
           let retries = 0;
           const maxRetries = 15; // Máximo de tentativas
           let delay = init_delay; // Tempo inicial de espera em milissegundos
@@ -1815,6 +1768,9 @@ const scheduleQuickResponseWithDate = (scheduledDateTime, recipient, triggerPhra
 
       const jsonResponse = await response.json();
       console.log(`Resposta rápida enviada com sucesso: ${JSON.stringify(jsonResponse)}`);
+
+      // Após o envio bem-sucedido, remove o registro do banco de dados
+      removeFromDBTypebotV6(recipient, scheduledDateTime);
     } catch (error) {
       console.error(`Erro ao enviar resposta rápida para a data/hora agendada: ${error.message}`);
     }
@@ -1823,11 +1779,11 @@ const scheduleQuickResponseWithDate = (scheduledDateTime, recipient, triggerPhra
 
 //Função agendamento de resposta rápida
 
-const scheduleQuickResponse = (hours, recipient, triggerPhrase) => {
+const scheduleQuickResponse = (scheduledDateTime, recipient, triggerPhrase) => {
   const currentTime = new Date();
-  const futureTime = new Date(currentTime.getTime() + hours * 3600000);
+  const targetTime = new Date(scheduledDateTime);
 
-  const delayInMilliseconds = futureTime.getTime() - currentTime.getTime();
+  const delayInMilliseconds = targetTime.getTime() - currentTime.getTime();
 
   setTimeout(async () => {
     try {
@@ -1848,6 +1804,9 @@ const scheduleQuickResponse = (hours, recipient, triggerPhrase) => {
 
       const jsonResponse = await response.json();
       console.log(`Resposta rápida enviada com sucesso: ${JSON.stringify(jsonResponse)}`);
+
+      // Após o envio bem-sucedido, remove o registro do banco de dados
+      removeFromDBTypebotV6(recipient, scheduledDateTime);
     } catch (error) {
       console.error(`Erro ao enviar resposta rápida: ${error.message}`);
     }
@@ -2233,55 +2192,8 @@ async function createSessionJohnny(data, url_registro, fluxo) {
           } else {
               console.log('Destinatário não encontrado no banco de dados.');
           }
-      }  
-      if (formattedText.startsWith('!audioraiz')){
-        if (existsDB(data.from)) {   
-        let retries = 0;
-        const maxRetries = 15; // Máximo de tentativas
-        let delay = init_delay; // Tempo inicial de espera em milissegundos
-        const url = formattedText.split(' ')[1];                
-    
-        const sendRequest = async () => {
-        const media = await tratarMidiaObj(url);
-            
-            const response = await fetch('http://localhost:8888/sendMessage', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    destinatario: data.from,
-                    media: media,
-                    tipo: "audio",                    
-                    msg: data
-                })
-            });
-    
-            if (!response.ok) {
-                throw new Error(`Request failed with status ${response.status}`);
-            }
-    
-            return await response.json();
-        };
-    
-        while (retries < maxRetries) {
-            try {
-                await sendRequest();                
-                break; // Sai do loop se a requisição for bem-sucedida
-            } catch (error) {
-                retries++;
-                console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
-               
-                await new Promise(resolve => setTimeout(resolve, delay));
-                delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
-            }
-        }
-    
-        if (retries === maxRetries) {
-            console.error('Erro: Número máximo de tentativas de envio atingido.');
-        }
-       
-        }
-      }      
-        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada')) && !(formattedText.startsWith('!audioraiz'))) {
+      }              
+        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada'))) {
           let retries = 0;
           const maxRetries = 15; // Máximo de tentativas
           let delay = init_delay; // Tempo inicial de espera em milissegundos
@@ -2655,55 +2567,8 @@ client.on('message', async msg => {
                 } else {
                     console.log('Destinatário não encontrado no banco de dados.');
                 }
-            } 
-            if (formattedText.startsWith('!audioraiz')){
-              if (existsDB(msg.from)) {   
-              let retries = 0;
-              const maxRetries = 15; // Máximo de tentativas
-              let delay = init_delay; // Tempo inicial de espera em milissegundos
-              const url = formattedText.split(' ')[1];                
-          
-              const sendRequest = async () => {
-              const media = await tratarMidiaObj(url);
-                  
-                  const response = await fetch('http://localhost:8888/sendMessage', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                          destinatario: msg.from,
-                          media: media,
-                          tipo: "audio",                    
-                          msg: msg
-                      })
-                  });
-          
-                  if (!response.ok) {
-                      throw new Error(`Request failed with status ${response.status}`);
-                  }
-          
-                  return await response.json();
-              };
-          
-              while (retries < maxRetries) {
-                  try {
-                      await sendRequest();                
-                      break; // Sai do loop se a requisição for bem-sucedida
-                  } catch (error) {
-                      retries++;
-                      console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
-                     
-                      await new Promise(resolve => setTimeout(resolve, delay));
-                      delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
-                  }
-              }
-          
-              if (retries === maxRetries) {
-                  console.error('Erro: Número máximo de tentativas de envio atingido.');
-              }
-             
-              }
             }      
-              if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada')) && !(formattedText.startsWith('!audioraiz'))) {
+              if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada'))) {
                 let retries = 0;
                 const maxRetries = 15; // Máximo de tentativas
                 let delay = init_delay; // Tempo inicial de espera em milissegundos                           
@@ -3629,55 +3494,8 @@ client.on('vote_update', async (vote) => {
         } else {
             console.log('Destinatário não encontrado no banco de dados.');
         }
-    }
-    if (formattedText.startsWith('!audioraiz')){
-      if (existsDB(vote.voter)) {   
-      let retries = 0;
-      const maxRetries = 15; // Máximo de tentativas
-      let delay = init_delay; // Tempo inicial de espera em milissegundos
-      const url = formattedText.split(' ')[1];                
-  
-      const sendRequest = async () => {
-      const media = await tratarMidiaObj(url);
-          
-          const response = await fetch('http://localhost:8888/sendMessage', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                  destinatario: vote.voter,
-                  media: media,
-                  tipo: "audio",                    
-                  msg: vote
-              })
-          });
-  
-          if (!response.ok) {
-              throw new Error(`Request failed with status ${response.status}`);
-          }
-  
-          return await response.json();
-      };
-  
-      while (retries < maxRetries) {
-          try {
-              await sendRequest();                
-              break; // Sai do loop se a requisição for bem-sucedida
-          } catch (error) {
-              retries++;
-              console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
-             
-              await new Promise(resolve => setTimeout(resolve, delay));
-              delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
-          }
-      }
-  
-      if (retries === maxRetries) {
-          console.error('Erro: Número máximo de tentativas de envio atingido.');
-      }
-     
-      }
-    }      
-      if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada')) && !(formattedText.startsWith('!audioraiz'))) {
+    }     
+      if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada'))) {
         let retries = 0;
         const maxRetries = 15; // Máximo de tentativas
         let delay = init_delay; // Tempo inicial de espera em milissegundos                           

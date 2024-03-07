@@ -1102,6 +1102,9 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
   };
 
   try {
+    if (!existsDB(datafrom)) {
+      addObject(datafrom, response.data.sessionId, datafrom.replace(/\D/g, ''), JSON.stringify(data.id.id), 'typing', fluxo, false, "active", db_length);
+    }
     const response = await axios.request(config);
 
     const messages = response.data.messages;
@@ -1725,6 +1728,16 @@ function removeFromDBTypebotV6(recipient, scheduledDateTime) {
   }
 }
 
+function removeAllFromDBTypebotV6(recipient) {
+  const db = readJSONFileTypebotV6(DATABASE_FILE_TYPEBOT_V6);
+  if (db[recipient]) {
+    // Remove todos os registros associados ao recipient
+    delete db[recipient];
+    // Grava as alterações no arquivo do banco de dados
+    writeJSONFileTypebotV6(DATABASE_FILE_TYPEBOT_V6, db);
+  }
+}
+
 function readJSONFileTypebotV6(filename) {
   try {
     return JSON.parse(fs.readFileSync(filename, 'utf8'));
@@ -1767,11 +1780,10 @@ const scheduleQuickResponseWithDate = (scheduledDateTime, recipient, triggerPhra
         throw new Error(`Request failed with status ${response.status}`);
       }
 
+      removeAllFromDBTypebotV6(recipient);
       const jsonResponse = await response.json();
       console.log(`Resposta rápida enviada com sucesso: ${JSON.stringify(jsonResponse)}`);
-
-      // Após o envio bem-sucedido, remove o registro do banco de dados
-      removeFromDBTypebotV6(recipient, scheduledDateTime);
+      
     } catch (error) {
       console.error(`Erro ao enviar resposta rápida para a data/hora agendada: ${error.message}`);
     }
@@ -1803,10 +1815,9 @@ const scheduleQuickResponse = (hours, recipient, triggerPhrase) => {
         throw new Error(`Request failed with status ${response.status}`);
       }
 
+      removeAllFromDBTypebotV6(recipient);
       const jsonResponse = await response.json();
-      console.log(`Resposta rápida enviada com sucesso: ${JSON.stringify(jsonResponse)}`);
-      
-      removeFromDBTypebotV6(recipient, futureTime.toISOString());
+      console.log(`Resposta rápida enviada com sucesso: ${JSON.stringify(jsonResponse)}`);      
     } catch (error) {
       console.error(`Erro ao enviar resposta rápida: ${error.message}`);
     }

@@ -1102,12 +1102,14 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
   };
 
   try {
-    if (!existsDB(datafrom)) {
-      addObject(datafrom, response.data.sessionId, datafrom.replace(/\D/g, ''), JSON.stringify(data.id.id), 'typing', fluxo, false, "active", db_length);
-    }
+    
     const response = await axios.request(config);
 
     const messages = response.data.messages;
+
+    if (!existsDB(datafrom)) {
+      addObject(datafrom, 'sessaonaoexistente', datafrom.replace(/\D/g, ''), JSON.stringify(data.id.id), 'typing', fluxo, false, "active", db_length);
+    }
     
     if(datafrom.endsWith('@c.us')){
     for (const message of messages){

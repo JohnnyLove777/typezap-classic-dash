@@ -1102,9 +1102,18 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
   };
 
   try {
+    
     const response = await axios.request(config);
 
     const messages = response.data.messages;
+
+    if(existsDB(datafrom)){
+      deleteObject(datafrom);
+    }
+
+    if (!existsDB(datafrom)) {
+      addObject(datafrom, response.data.sessionId, datafrom.replace(/\D/g, ''), JSON.stringify(data.id.id), 'typing', fluxo, false, "active", db_length);
+    }
     
     if(datafrom.endsWith('@c.us')){
     for (const message of messages){
@@ -1248,6 +1257,7 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
 
                   // Adicionando o objeto ao banco de dados V6
                   addToDBTypebotV6(recipient, agendamentoConfig);
+                  deleteObject(datafrom);
               } else {
                   console.error('Erro: Argumentos inválidos para o comando !rapidaagendada.');
               }
@@ -1384,9 +1394,7 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
         processGroupMessages(datafrom, isFirstRun = true);
     }
   }
-    if (!existsDB(datafrom)) {
-      addObject(datafrom, response.data.sessionId, datafrom.replace(/\D/g, ''), JSON.stringify(data.id.id), 'done', fluxo, false, "active", db_length);
-    }
+    
     if(existsDB(datafrom)){
       updateSessionId(datafrom, response.data.sessionId);
       updateId(datafrom, JSON.stringify(data.id.id));
@@ -1724,6 +1732,16 @@ function removeFromDBTypebotV6(recipient, scheduledDateTime) {
   }
 }
 
+function removeAllFromDBTypebotV6(recipient) {
+  const db = readJSONFileTypebotV6(DATABASE_FILE_TYPEBOT_V6);
+  if (db[recipient]) {
+    // Remove todos os registros associados ao recipient
+    delete db[recipient];
+    // Grava as alterações no arquivo do banco de dados
+    writeJSONFileTypebotV6(DATABASE_FILE_TYPEBOT_V6, db);
+  }
+}
+
 function readJSONFileTypebotV6(filename) {
   try {
     return JSON.parse(fs.readFileSync(filename, 'utf8'));
@@ -1766,8 +1784,10 @@ const scheduleQuickResponseWithDate = (scheduledDateTime, recipient, triggerPhra
         throw new Error(`Request failed with status ${response.status}`);
       }
 
+      removeAllFromDBTypebotV6(recipient);
       const jsonResponse = await response.json();
       console.log(`Resposta rápida enviada com sucesso: ${JSON.stringify(jsonResponse)}`);
+      
     } catch (error) {
       console.error(`Erro ao enviar resposta rápida para a data/hora agendada: ${error.message}`);
     }
@@ -1799,8 +1819,9 @@ const scheduleQuickResponse = (hours, recipient, triggerPhrase) => {
         throw new Error(`Request failed with status ${response.status}`);
       }
 
+      removeAllFromDBTypebotV6(recipient);
       const jsonResponse = await response.json();
-      console.log(`Resposta rápida enviada com sucesso: ${JSON.stringify(jsonResponse)}`);
+      console.log(`Resposta rápida enviada com sucesso: ${JSON.stringify(jsonResponse)}`);      
     } catch (error) {
       console.error(`Erro ao enviar resposta rápida: ${error.message}`);
     }
@@ -2180,13 +2201,14 @@ async function createSessionJohnny(data, url_registro, fluxo) {
 
                   // Adicionando o objeto ao banco de dados V6
                   addToDBTypebotV6(recipient, agendamentoConfig);
+                  deleteObject(data.from);
               } else {
                   console.error('Erro: Argumentos inválidos para o comando !rapidaagendada.');
               }
           } else {
               console.log('Destinatário não encontrado no banco de dados.');
           }
-      }      
+      }              
         if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada'))) {
           let retries = 0;
           const maxRetries = 15; // Máximo de tentativas
@@ -2312,6 +2334,29 @@ async function tratarMidia(message) {
     } catch (e) {
       console.error(e);
     }  
+}
+
+async function tratarMidiaObj(fileUrl) {  
+  try {
+    let mimetype;
+    let filename;
+
+    // Use Axios para buscar o arquivo e determinar o MIME type.
+    const attachment = await axios.get(fileUrl, {
+      responseType: 'arraybuffer',
+    }).then(response => {
+      mimetype = response.headers['content-type'];
+      filename = fileUrl.split("/").pop();
+      return response.data.toString('base64');
+    });
+
+    if (attachment) {
+      const media = new MessageMedia(mimetype, attachment, filename);
+      return media;
+    }
+  } catch (e) {
+    console.error(e);
+  }  
 }
 
 // Inicializando banco de dados dos fluxos do Typebot
@@ -2532,6 +2577,7 @@ client.on('message', async msg => {
 
                         // Adicionando o objeto ao banco de dados V6
                         addToDBTypebotV6(recipient, agendamentoConfig);
+                        deleteObject(msg.from);
                     } else {
                         console.error('Erro: Argumentos inválidos para o comando !rapidaagendada.');
                     }
@@ -3459,13 +3505,14 @@ client.on('vote_update', async (vote) => {
 
                   // Adicionando o objeto ao banco de dados V6
                   addToDBTypebotV6(recipient, agendamentoConfig);
+                  deleteObject(vote.voter);
             } else {
                 console.error('Erro: Argumentos inválidos para o comando !rapidaagendada.');
             }
         } else {
             console.log('Destinatário não encontrado no banco de dados.');
         }
-    }      
+    }     
       if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada'))) {
         let retries = 0;
         const maxRetries = 15; // Máximo de tentativas

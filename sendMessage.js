@@ -160,6 +160,18 @@ initializeWebhookDB();
     }
   }
 
+  async function sendAudioWithRetry(phoneNumber, messageToSend) {
+    try {
+        //const audiob01 = MessageMedia.fromFilePath('./b01.opus'); // Arquivo de audio em ogg gravado
+        //await client.sendMessage(msg.from, audiob01, {sendAudioAsVoice: true}); // enviando o audio16 
+        await client.sendMessage(phoneNumber, messageToSend, {sendAudioAsVoice: true});      
+    } catch (error) {
+        console.error(`Falha ao enviar audio para ${phoneNumber}: erro: ${error}`);
+        // Sinaliza ao PM2 para reiniciar o aplicativo devido a um erro crítico
+        process.exit(1);
+    }
+  }
+
   async function extrairGrupo(grupoId) {
     const chat = await client.getChatById(grupoId);
     const contatos = [];
@@ -427,7 +439,7 @@ app.post('/media', async (req, res) => {
             // Simula gravação de áudio no chat.
             await chat.sendStateRecording();    
             
-            await sendMessageWithRetry(destinatario, media);
+            await sendAudioWithRetry(destinatario, media);            
         } else {
             console.log('Número não está registrado no WhatsApp.');
         }

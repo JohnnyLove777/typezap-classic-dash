@@ -1701,6 +1701,7 @@ function initializeDBTypebotV6() {
       db[recipient].forEach(quickResponseConfig => {
         const scheduledDateTime = new Date(quickResponseConfig.scheduledDateTime);
         if (scheduledDateTime > new Date()) {
+          console.log(`Disparo gatilho '${quickResponseConfig.triggerPhrase}' agendado para o número ${recipient} às ${scheduledDateTime}`);
           scheduleQuickResponseWithDate(scheduledDateTime, recipient, quickResponseConfig.triggerPhrase);
         }
       });
@@ -1738,7 +1739,7 @@ function removeAllFromDBTypebotV6(recipient) {
   }
 }
 
-function readJSONFileTypebotV6(filename) {
+/*function readJSONFileTypebotV6(filename) {
   try {
     return JSON.parse(fs.readFileSync(filename, 'utf8'));
   } catch (error) {
@@ -1749,6 +1750,15 @@ function readJSONFileTypebotV6(filename) {
 
 function writeJSONFileTypebotV6(filename, data) {
   fs.writeFileSync(filename, JSON.stringify(data, null, 2), 'utf8');
+}*/
+
+function writeJSONFileTypebotV6(filePath, data) {
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+}
+
+function readJSONFileTypebotV6(filePath) {
+  const data = fs.readFileSync(filePath, 'utf-8');
+  return JSON.parse(data);
 }
 
 const scheduleQuickResponseWithDate = (scheduledDateTime, recipient, triggerPhrase) => {
@@ -1772,7 +1782,7 @@ const scheduleQuickResponseWithDate = (scheduledDateTime, recipient, triggerPhra
           destinatario: recipient,
           mensagem: triggerPhrase,
           tipo: "text",
-          token: token // Assume que 'token' esteja definido corretamente no seu escopo
+          token // Assume que 'token' esteja definido corretamente no seu escopo
         })
       });
 

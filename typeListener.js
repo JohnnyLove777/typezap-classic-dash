@@ -860,6 +860,16 @@ function listAllFromDB() {
     return readJSONFile(DATABASE_FILE_TYPE);
 }
 
+function findURLByNameV1(name) {
+  const db = readJSONFile(DATABASE_FILE_TYPE);
+  
+  // Procura por uma entrada no banco de dados que corresponda ao nome fornecido
+  const entry = db[name];
+
+  // Retorna a URL se uma entrada correspondente for encontrada
+  return entry ? entry.url_registro : null;
+}
+
 // Inicio das rotinas do banco de dados para guardar multiplos fluxos de Typebot
 
 const DATABASE_FILE_SELF = 'typeconfigsdb.json';
@@ -1057,6 +1067,16 @@ function readFromDBTypebotV2(name) {
     return db[name];
 }
 
+function findFlowNameByTriggerV2(trigger) {
+  const db = readJSONFileTypebotV2(DATABASE_FILE_TYPEBOT_V2);
+  
+  // Procura por uma entrada no banco de dados que corresponda ao gatilho fornecido
+  const entry = Object.entries(db).find(([key, value]) => value.gatilho === trigger);
+
+  // Retorna o nome do fluxo se uma entrada correspondente for encontrada
+  return entry ? entry[1].name : null;
+}
+
 function listAllFromDBTypebotV2() {
     return readJSONFileTypebotV2(DATABASE_FILE_TYPEBOT_V2);
 }
@@ -1236,10 +1256,11 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
           if (existsDB(datafrom)) {              
               const args = formattedText.slice('!rapidaagendada'.length).trim().split(/\s+/);              
               const hours = parseFloat(args[0]);              
-              const triggerMessage = args.slice(1).join(' ');      
+              const triggerMessage = args.slice(1).join(' ');
+              
               if (!isNaN(hours) && triggerMessage) {                  
                   scheduleQuickResponse(hours, datafrom, triggerMessage);
-                  console.log('Resposta rápida agendada com sucesso.');
+                  console.log('Resposta rápida agendada com sucesso.');     
 
                   const recipient = datafrom; // Número do destinatário
                   const scheduledDateTime = new Date(); // Configura para uma data/hora específica
@@ -1690,59 +1711,15 @@ function listAllFromDBTypebotV5() {
 
 const DATABASE_FILE_TYPEBOT_V6 = 'typebotDBV6.json';
 
-
-async function initializeDBTypebotV6() {
-  try {
-    if (!await fs.exists(DATABASE_FILE_TYPEBOT_V6)) {
+function initializeDBTypebotV6() {
+  // Verifica se o arquivo do banco de dados já existe
+  if (!fs.existsSync(DATABASE_FILE_TYPEBOT_V6)) {
+      // Se não existir, inicializa com um objeto vazio
       const db = {};
-      await writeJSONFileTypebotV6(DATABASE_FILE_TYPEBOT_V6, db);
-      console.log("Banco de dados V6 inicializado como vazio.");
-    } else {
+      writeJSONFileTypebotV6(DATABASE_FILE_TYPEBOT_V6, db);
+  } else {
+      // Se já existir, mantém os dados existentes
       console.log('Banco de dados V6 já existe e não será sobrescrito.');
-      const db = await readJSONFileTypebotV6(DATABASE_FILE_TYPEBOT_V6);
-
-      Object.keys(db).forEach(recipient => {
-        console.log(`Processando agendamentos para o número: ${recipient}`);
-        db[recipient].forEach(async (quickResponseConfig) => {
-          const scheduledDateTime = new Date(quickResponseConfig.scheduledDateTime);
-          const currentTime = new Date();
-          if (scheduledDateTime > currentTime) {
-            const delayInMilliseconds = scheduledDateTime.getTime() - currentTime.getTime();
-            console.log(`Disparo gatilho '${quickResponseConfig.triggerPhrase}' será agendado para o número ${recipient} às ${scheduledDateTime}.`);
-
-            setTimeout(async () => {
-              try {
-                const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    destinatario: recipient,
-                    mensagem: quickResponseConfig.triggerPhrase,
-                    tipo: "text",
-                    token: token // Certifique-se de que o token está definido corretamente
-                  })
-                });
-
-                if (!response.ok) {
-                  throw new Error(`Request failed with status ${response.status}`);
-                }
-
-                await removeAllFromDBTypebotV6(recipient);
-                const jsonResponse = await response.json();
-                console.log(`Resposta rápida enviada com sucesso para ${recipient}: ${JSON.stringify(jsonResponse)}`);
-                
-              } catch (error) {
-                console.error(`Erro ao enviar resposta rápida para ${recipient} na data/hora agendada: ${error.message}`);
-              }
-            }, delayInMilliseconds);
-          } else {
-            console.log(`Data/hora agendada para ${recipient} já passou, ignorando.`);
-          }
-        });
-      });
-    }
-  } catch (error) {
-    console.error("Erro durante a inicialização do DBTypebotV6:", error);
   }
 }
 
@@ -1827,6 +1804,37 @@ const scheduleQuickResponseWithDate = (scheduledDateTime, recipient, triggerPhra
     }
   }, delayInMilliseconds);
 };
+
+function initServerV6() {
+  // Carrega o banco de dados
+  const dbPath = path.join(__dirname, 'typebotDBV6.json');
+  fs.readFile(dbPath, 'utf8', (err, data) => {
+    if (err) {
+      console.error('Erro ao carregar o banco de dados:', err);
+      return;
+    }
+
+    const database = JSON.parse(data);
+
+    Object.keys(database).forEach(phoneNumber => {
+      const schedules = database[phoneNumber];
+      schedules.forEach(schedule => {
+        const scheduledDateTime = new Date(schedule.scheduledDateTime);
+        const now = new Date();
+        const diffInMilliseconds = scheduledDateTime - now;
+        const diffInHours = diffInMilliseconds / 1000 / 60 / 60;
+
+        if (diffInHours > 0) {
+          // Aciona a função scheduleQuickResponse se a data agendada ainda não passou
+          scheduleQuickResponse(diffInHours, phoneNumber, schedule.triggerPhrase);
+        }
+      });
+    });
+  });
+}
+
+// Supondo que você queira chamar initServer ao iniciar seu servidor
+initServerV6();
 
 //Função agendamento de resposta rápida
 

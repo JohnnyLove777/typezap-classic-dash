@@ -58,8 +58,6 @@ async function sendMessage(phoneNumber, messageToSend) {
       await client.sendMessage(phoneNumber, messageToSend);      
   } catch (error) {
       console.error(`Falha ao enviar mensagem para ${phoneNumber}: erro: ${error}`);
-      // Sinaliza ao PM2 para reiniciar o aplicativo devido a um erro crítico
-      process.exit(1);
   }
 }
 
@@ -862,6 +860,16 @@ function listAllFromDB() {
     return readJSONFile(DATABASE_FILE_TYPE);
 }
 
+function findURLByNameV1(name) {
+  const db = readJSONFile(DATABASE_FILE_TYPE);
+  
+  // Procura por uma entrada no banco de dados que corresponda ao nome fornecido
+  const entry = db[name];
+
+  // Retorna a URL se uma entrada correspondente for encontrada
+  return entry ? entry.url_registro : null;
+}
+
 // Inicio das rotinas do banco de dados para guardar multiplos fluxos de Typebot
 
 const DATABASE_FILE_SELF = 'typeconfigsdb.json';
@@ -1059,6 +1067,16 @@ function readFromDBTypebotV2(name) {
     return db[name];
 }
 
+function findFlowNameByTriggerV2(trigger) {
+  const db = readJSONFileTypebotV2(DATABASE_FILE_TYPEBOT_V2);
+  
+  // Procura por uma entrada no banco de dados que corresponda ao gatilho fornecido
+  const entry = Object.entries(db).find(([key, value]) => value.gatilho === trigger);
+
+  // Retorna o nome do fluxo se uma entrada correspondente for encontrada
+  return entry ? entry[1].name : null;
+}
+
 function listAllFromDBTypebotV2() {
     return readJSONFileTypebotV2(DATABASE_FILE_TYPEBOT_V2);
 }
@@ -1227,8 +1245,7 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
                     delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
                 }
             }
-            console.error('Erro: Número máximo de tentativas de envio atingido.');
-            process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
+            console.error('Erro: Número máximo de tentativas de envio atingido.');            
         };
         
            sendMessageWithRetry();
@@ -1239,10 +1256,11 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
           if (existsDB(datafrom)) {              
               const args = formattedText.slice('!rapidaagendada'.length).trim().split(/\s+/);              
               const hours = parseFloat(args[0]);              
-              const triggerMessage = args.slice(1).join(' ');      
+              const triggerMessage = args.slice(1).join(' ');
+              
               if (!isNaN(hours) && triggerMessage) {                  
                   scheduleQuickResponse(hours, datafrom, triggerMessage);
-                  console.log('Resposta rápida agendada com sucesso.');
+                  console.log('Resposta rápida agendada com sucesso.');     
 
                   const recipient = datafrom; // Número do destinatário
                   const scheduledDateTime = new Date(); // Configura para uma data/hora específica
@@ -1305,7 +1323,6 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
                 }
             }
             console.error('Erro: Número máximo de tentativas de envio atingido.');
-            process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
           };
         
           sendMessageWithRetry();
@@ -1695,20 +1712,14 @@ function listAllFromDBTypebotV5() {
 const DATABASE_FILE_TYPEBOT_V6 = 'typebotDBV6.json';
 
 function initializeDBTypebotV6() {
+  // Verifica se o arquivo do banco de dados já existe
   if (!fs.existsSync(DATABASE_FILE_TYPEBOT_V6)) {
-    const db = {};
-    writeJSONFileTypebotV6(DATABASE_FILE_TYPEBOT_V6, db);
+      // Se não existir, inicializa com um objeto vazio
+      const db = {};
+      writeJSONFileTypebotV6(DATABASE_FILE_TYPEBOT_V6, db);
   } else {
-    const db = readJSONFileTypebotV6(DATABASE_FILE_TYPEBOT_V6);
-
-    Object.keys(db).forEach(recipient => {
-      db[recipient].forEach(quickResponseConfig => {
-        const scheduledDateTime = new Date(quickResponseConfig.scheduledDateTime);
-        if (scheduledDateTime > new Date()) {
-          scheduleQuickResponseWithDate(scheduledDateTime, recipient, quickResponseConfig.triggerPhrase);
-        }
-      });
-    });
+      // Se já existir, mantém os dados existentes
+      console.log('Banco de dados V6 já existe e não será sobrescrito.');
   }
 }
 
@@ -1776,7 +1787,7 @@ const scheduleQuickResponseWithDate = (scheduledDateTime, recipient, triggerPhra
           destinatario: recipient,
           mensagem: triggerPhrase,
           tipo: "text",
-          token: token // Assume que 'token' esteja definido corretamente no seu escopo
+          token // Assume que 'token' esteja definido corretamente no seu escopo
         })
       });
 
@@ -2023,9 +2034,7 @@ const sendMediaEndPoint = async (datafrom, link, port = 8888) => {
       }
   }
 
-  console.error('Erro: Número máximo de tentativas de envio atingido.');
-  // Aqui você pode escolher como lidar com o erro após as tentativas excedidas.
-  // process.exit(1); // Sai com erro. Descomente se estiver usando em um contexto onde isso faça sentido.
+  console.error('Erro: Número máximo de tentativas de envio atingido.');  
 };
 
 // Final das rotinas de disparo para Grupos
@@ -2171,8 +2180,7 @@ async function createSessionJohnny(data, url_registro, fluxo) {
                     delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
                 }
             }
-            console.error('Erro: Número máximo de tentativas de envio atingido.');
-            process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
+            console.error('Erro: Número máximo de tentativas de envio atingido.');           
         };
         
            sendMessageWithRetry();
@@ -2250,7 +2258,6 @@ async function createSessionJohnny(data, url_registro, fluxo) {
                 }
             }
             console.error('Erro: Número máximo de tentativas de envio atingido.');
-            process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
         };
         
         sendMessageWithRetry();
@@ -2548,7 +2555,6 @@ client.on('message', async msg => {
                       }
                   }
                   console.error('Erro: Número máximo de tentativas de envio atingido.');
-                  process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
               };
               
                  sendMessageWithRetry();
@@ -2625,7 +2631,6 @@ client.on('message', async msg => {
                       }
                   }
                   console.error('Erro: Número máximo de tentativas de envio atingido.');
-                  process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
               };
               
               sendMessageWithRetry();
@@ -3552,7 +3557,6 @@ client.on('vote_update', async (vote) => {
               }
           }
           console.error('Erro: Número máximo de tentativas de envio atingido.');
-          process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
       };
       
       sendMessageWithRetry();

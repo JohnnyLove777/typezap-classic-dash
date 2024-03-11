@@ -1700,9 +1700,37 @@ function initializeDBTypebotV6() {
     Object.keys(db).forEach(recipient => {
       db[recipient].forEach(quickResponseConfig => {
         const scheduledDateTime = new Date(quickResponseConfig.scheduledDateTime);
-        if (scheduledDateTime > new Date()) {
-          console.log(`Disparo gatilho '${quickResponseConfig.triggerPhrase}' agendado para o número ${recipient} às ${scheduledDateTime}`);
-          scheduleQuickResponseWithDate(scheduledDateTime, recipient, quickResponseConfig.triggerPhrase);
+        const currentTime = new Date();
+        if (scheduledDateTime > currentTime) {
+          const delayInMilliseconds = scheduledDateTime.getTime() - currentTime.getTime();
+
+          console.log(`Disparo gatilho '${quickResponseConfig.triggerPhrase}' agendado para o número ${recipient} às ${scheduledDateTime}.`);
+
+          setTimeout(async () => {
+            try {
+              const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  destinatario: recipient,
+                  mensagem: quickResponseConfig.triggerPhrase,
+                  tipo: "text",
+                  token: token // Garanta que token esteja definido corretamente
+                })
+              });
+
+              if (!response.ok) {
+                throw new Error(`Request failed with status ${response.status}`);
+              }
+
+              removeAllFromDBTypebotV6(recipient);
+              const jsonResponse = await response.json();
+              console.log(`Resposta rápida enviada com sucesso: ${JSON.stringify(jsonResponse)}`);
+              
+            } catch (error) {
+              console.error(`Erro ao enviar resposta rápida para a data/hora agendada: ${error.message}`);
+            }
+          }, delayInMilliseconds);
         }
       });
     });
@@ -1739,7 +1767,7 @@ function removeAllFromDBTypebotV6(recipient) {
   }
 }
 
-/*function readJSONFileTypebotV6(filename) {
+function readJSONFileTypebotV6(filename) {
   try {
     return JSON.parse(fs.readFileSync(filename, 'utf8'));
   } catch (error) {
@@ -1750,15 +1778,6 @@ function removeAllFromDBTypebotV6(recipient) {
 
 function writeJSONFileTypebotV6(filename, data) {
   fs.writeFileSync(filename, JSON.stringify(data, null, 2), 'utf8');
-}*/
-
-function writeJSONFileTypebotV6(filePath, data) {
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
-}
-
-function readJSONFileTypebotV6(filePath) {
-  const data = fs.readFileSync(filePath, 'utf-8');
-  return JSON.parse(data);
 }
 
 const scheduleQuickResponseWithDate = (scheduledDateTime, recipient, triggerPhrase) => {

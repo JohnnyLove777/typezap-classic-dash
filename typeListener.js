@@ -1805,49 +1805,6 @@ const scheduleQuickResponseWithDate = (scheduledDateTime, recipient, triggerPhra
   }, delayInMilliseconds);
 };
 
-async function initServerV6() {
-  try {
-    const dbPath = path.join(__dirname, 'typebotDBV6.json');
-    console.log(`Iniciando servidor - Carregando banco de dados de: ${dbPath}`);
-
-    // Agora usamos await aqui para esperar a leitura do arquivo ser completada
-    const data = fs.readFile(dbPath, 'utf8');
-    console.log('Banco de dados carregado com sucesso.');
-    const database = JSON.parse(data);
-    console.log('Banco de dados parseado para objeto JSON.');
-
-    for (const phoneNumber of Object.keys(database)) {
-      console.log(`Processando agendas para o número: ${phoneNumber}`);
-      const schedules = database[phoneNumber];
-
-      for (const schedule of schedules) {
-        console.log(`Agendamento encontrado: ${JSON.stringify(schedule)}`);
-        const scheduledDateTime = new Date(schedule.scheduledDateTime);
-        const now = new Date();
-        const diffInMilliseconds = scheduledDateTime - now;
-        const diffInHours = diffInMilliseconds / 1000 / 60 / 60;
-
-        console.log(`Diferença até o agendamento: ${diffInHours} horas.`);
-
-        if (diffInHours > 0) {
-          // Aguarda a conclusão de scheduleQuickResponse antes de continuar
-          scheduleQuickResponse(diffInHours, phoneNumber, schedule.triggerPhrase);
-        } else {
-          console.log(`Agendamento para ${phoneNumber} já passou. Ignorando.`);
-        }
-      }
-    }
-  } catch (err) {
-    console.error('Erro ao processar o banco de dados:', err);
-  }
-}
-
-// Invocando initServerV6 de forma assíncrona
-(async () => {
-  await initServerV6();
-  console.log('Inicialização do servidor V6 completa.');
-})();
-
 //Função agendamento de resposta rápida
 
 const scheduleQuickResponse = (hours, recipient, triggerPhrase) => {

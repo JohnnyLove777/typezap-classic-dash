@@ -1690,50 +1690,59 @@ function listAllFromDBTypebotV5() {
 
 const DATABASE_FILE_TYPEBOT_V6 = 'typebotDBV6.json';
 
-function initializeDBTypebotV6() {
-  if (!fs.existsSync(DATABASE_FILE_TYPEBOT_V6)) {
-    const db = {};
-    writeJSONFileTypebotV6(DATABASE_FILE_TYPEBOT_V6, db);
-  } else {
-    const db = readJSONFileTypebotV6(DATABASE_FILE_TYPEBOT_V6);
 
-    Object.keys(db).forEach(recipient => {
-      db[recipient].forEach(quickResponseConfig => {
-        const scheduledDateTime = new Date(quickResponseConfig.scheduledDateTime);
-        const currentTime = new Date();
-        if (scheduledDateTime > currentTime) {
-          const delayInMilliseconds = scheduledDateTime.getTime() - currentTime.getTime();
+async function initializeDBTypebotV6() {
+  try {
+    if (!await fs.exists(DATABASE_FILE_TYPEBOT_V6)) {
+      const db = {};
+      await writeJSONFileTypebotV6(DATABASE_FILE_TYPEBOT_V6, db);
+      console.log("Banco de dados V6 inicializado como vazio.");
+    } else {
+      console.log('Banco de dados V6 já existe e não será sobrescrito.');
+      const db = await readJSONFileTypebotV6(DATABASE_FILE_TYPEBOT_V6);
 
-          console.log(`Disparo gatilho '${quickResponseConfig.triggerPhrase}' agendado para o número ${recipient} às ${scheduledDateTime}.`);
+      Object.keys(db).forEach(recipient => {
+        console.log(`Processando agendamentos para o número: ${recipient}`);
+        db[recipient].forEach(async (quickResponseConfig) => {
+          const scheduledDateTime = new Date(quickResponseConfig.scheduledDateTime);
+          const currentTime = new Date();
+          if (scheduledDateTime > currentTime) {
+            const delayInMilliseconds = scheduledDateTime.getTime() - currentTime.getTime();
+            console.log(`Disparo gatilho '${quickResponseConfig.triggerPhrase}' será agendado para o número ${recipient} às ${scheduledDateTime}.`);
 
-          setTimeout(async () => {
-            try {
-              const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  destinatario: recipient,
-                  mensagem: quickResponseConfig.triggerPhrase,
-                  tipo: "text",
-                  token: token // Garanta que token esteja definido corretamente
-                })
-              });
+            setTimeout(async () => {
+              try {
+                const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    destinatario: recipient,
+                    mensagem: quickResponseConfig.triggerPhrase,
+                    tipo: "text",
+                    token: token // Certifique-se de que o token está definido corretamente
+                  })
+                });
 
-              if (!response.ok) {
-                throw new Error(`Request failed with status ${response.status}`);
+                if (!response.ok) {
+                  throw new Error(`Request failed with status ${response.status}`);
+                }
+
+                await removeAllFromDBTypebotV6(recipient);
+                const jsonResponse = await response.json();
+                console.log(`Resposta rápida enviada com sucesso para ${recipient}: ${JSON.stringify(jsonResponse)}`);
+                
+              } catch (error) {
+                console.error(`Erro ao enviar resposta rápida para ${recipient} na data/hora agendada: ${error.message}`);
               }
-
-              removeAllFromDBTypebotV6(recipient);
-              const jsonResponse = await response.json();
-              console.log(`Resposta rápida enviada com sucesso: ${JSON.stringify(jsonResponse)}`);
-              
-            } catch (error) {
-              console.error(`Erro ao enviar resposta rápida para a data/hora agendada: ${error.message}`);
-            }
-          }, delayInMilliseconds);
-        }
+            }, delayInMilliseconds);
+          } else {
+            console.log(`Data/hora agendada para ${recipient} já passou, ignorando.`);
+          }
+        });
       });
-    });
+    }
+  } catch (error) {
+    console.error("Erro durante a inicialização do DBTypebotV6:", error);
   }
 }
 

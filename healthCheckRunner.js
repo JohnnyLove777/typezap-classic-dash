@@ -4,7 +4,7 @@ const { exec } = require('child_process');
 async function checkServiceHealth(url, serviceName) {
   try {
     const response = await axios.get(url);
-    console.log(`Health check for ${url} succeeded with status:`, response.data);
+    //console.log(`Health check for ${url} succeeded with status:`, response.data);
   } catch (error) {
     console.error(`Health check for ${url} failed:`, error.message);
     console.log(`Tentando reiniciar ${serviceName}...`);
@@ -31,6 +31,6 @@ function runHealthChecks() {
 }
 
 // Adicionando latência inicial antes de iniciar as verificações
-const initialDelay = 600000; // 10 minutos em milissegundos
+const initialDelay = 3600000; // 60 minutos em milissegundos
 
 setTimeout(runHealthChecks, initialDelay);

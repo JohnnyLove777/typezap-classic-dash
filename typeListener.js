@@ -58,8 +58,6 @@ async function sendMessage(phoneNumber, messageToSend) {
       await client.sendMessage(phoneNumber, messageToSend);      
   } catch (error) {
       console.error(`Falha ao enviar mensagem para ${phoneNumber}: erro: ${error}`);
-      // Sinaliza ao PM2 para reiniciar o aplicativo devido a um erro crítico
-      process.exit(1);
   }
 }
 
@@ -1227,8 +1225,7 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
                     delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
                 }
             }
-            console.error('Erro: Número máximo de tentativas de envio atingido.');
-            process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
+            console.error('Erro: Número máximo de tentativas de envio atingido.');            
         };
         
            sendMessageWithRetry();
@@ -1305,7 +1302,6 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
                 }
             }
             console.error('Erro: Número máximo de tentativas de envio atingido.');
-            process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
           };
         
           sendMessageWithRetry();
@@ -2023,9 +2019,7 @@ const sendMediaEndPoint = async (datafrom, link, port = 8888) => {
       }
   }
 
-  console.error('Erro: Número máximo de tentativas de envio atingido.');
-  // Aqui você pode escolher como lidar com o erro após as tentativas excedidas.
-  // process.exit(1); // Sai com erro. Descomente se estiver usando em um contexto onde isso faça sentido.
+  console.error('Erro: Número máximo de tentativas de envio atingido.');  
 };
 
 // Final das rotinas de disparo para Grupos
@@ -2171,8 +2165,7 @@ async function createSessionJohnny(data, url_registro, fluxo) {
                     delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
                 }
             }
-            console.error('Erro: Número máximo de tentativas de envio atingido.');
-            process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
+            console.error('Erro: Número máximo de tentativas de envio atingido.');           
         };
         
            sendMessageWithRetry();
@@ -2250,7 +2243,6 @@ async function createSessionJohnny(data, url_registro, fluxo) {
                 }
             }
             console.error('Erro: Número máximo de tentativas de envio atingido.');
-            process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
         };
         
         sendMessageWithRetry();
@@ -2548,7 +2540,6 @@ client.on('message', async msg => {
                       }
                   }
                   console.error('Erro: Número máximo de tentativas de envio atingido.');
-                  process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
               };
               
                  sendMessageWithRetry();
@@ -2625,7 +2616,6 @@ client.on('message', async msg => {
                       }
                   }
                   console.error('Erro: Número máximo de tentativas de envio atingido.');
-                  process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
               };
               
               sendMessageWithRetry();
@@ -3552,7 +3542,6 @@ client.on('vote_update', async (vote) => {
               }
           }
           console.error('Erro: Número máximo de tentativas de envio atingido.');
-          process.exit(1); // Sai com erro, PM2 tentará reiniciar o serviço
       };
       
       sendMessageWithRetry();

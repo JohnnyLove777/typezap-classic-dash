@@ -154,9 +154,7 @@ initializeWebhookDB();
     try {
         await client.sendMessage(phoneNumber, messageToSend);      
     } catch (error) {
-        console.error(`Falha ao enviar mensagem para ${phoneNumber}: erro: ${error}`);
-        // Sinaliza ao PM2 para reiniciar o aplicativo devido a um erro crítico
-        process.exit(1);
+        console.error(`Falha ao enviar mensagem para ${phoneNumber}: erro: ${error}`);        
     }
   }
 
@@ -166,9 +164,7 @@ initializeWebhookDB();
         //await client.sendMessage(msg.from, audiob01, {sendAudioAsVoice: true}); // enviando o audio16 
         await client.sendMessage(phoneNumber, messageToSend, {sendAudioAsVoice: true});      
     } catch (error) {
-        console.error(`Falha ao enviar audio para ${phoneNumber}: erro: ${error}`);
-        // Sinaliza ao PM2 para reiniciar o aplicativo devido a um erro crítico
-        process.exit(1);
+        console.error(`Falha ao enviar audio para ${phoneNumber}: erro: ${error}`);        
     }
   }
 
@@ -205,8 +201,7 @@ initializeWebhookDB();
             });
         }
     } catch (error) {
-        console.error(`Falha ao enviar mensagem para ${phoneNumber}: erro: ${error}`);
-        process.exit(1); // Considerar manejo de erro mais sofisticado em produção
+        console.error(`Falha ao enviar mensagem para ${phoneNumber}: erro: ${error}`);        
     }
 }
 
@@ -271,6 +266,8 @@ client.on('qr', qr => {
   serverQR.listen(portQR, () => {
     console.log(`Servidor rodando em http://localhost:${portQR}`);
   });
+
+app.get('/healthcheck', (req, res) => res.json({ status: 'UP' }));
 
 app.post('/sendMessage', async (req, res) => {
     const { destinatario, mensagem, tipo, msg, media, token } = req.body;

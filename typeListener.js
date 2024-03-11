@@ -1806,27 +1806,39 @@ const scheduleQuickResponseWithDate = (scheduledDateTime, recipient, triggerPhra
 };
 
 function initServerV6() {
-  // Carrega o banco de dados
+  // Define o caminho para o banco de dados
   const dbPath = path.join(__dirname, 'typebotDBV6.json');
+  console.log(`Iniciando servidor - Carregando banco de dados de: ${dbPath}`);
+
+  // Tenta ler o arquivo do banco de dados
   fs.readFile(dbPath, 'utf8', (err, data) => {
     if (err) {
       console.error('Erro ao carregar o banco de dados:', err);
       return;
     }
 
+    console.log('Banco de dados carregado com sucesso.');
     const database = JSON.parse(data);
+    console.log('Banco de dados parseado para objeto JSON.');
 
     Object.keys(database).forEach(phoneNumber => {
+      console.log(`Processando agendas para o número: ${phoneNumber}`);
       const schedules = database[phoneNumber];
       schedules.forEach(schedule => {
+        console.log(`Agendamento encontrado: ${JSON.stringify(schedule)}`);
         const scheduledDateTime = new Date(schedule.scheduledDateTime);
         const now = new Date();
         const diffInMilliseconds = scheduledDateTime - now;
         const diffInHours = diffInMilliseconds / 1000 / 60 / 60;
 
+        console.log(`Diferença até o agendamento: ${diffInHours} horas.`);
+        
         if (diffInHours > 0) {
-          // Aciona a função scheduleQuickResponse se a data agendada ainda não passou
+          console.log(`Agendando resposta rápida para: ${phoneNumber} com a frase: ${schedule.triggerPhrase}`);
+          // Supondo que scheduleQuickResponse seja uma função assíncrona ou de callback
           scheduleQuickResponse(diffInHours, phoneNumber, schedule.triggerPhrase);
+        } else {
+          console.log(`Agendamento para ${phoneNumber} já passou. Ignorando.`);
         }
       });
     });

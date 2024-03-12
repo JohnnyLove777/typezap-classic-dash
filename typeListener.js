@@ -1093,7 +1093,21 @@ function writeJSONFileTypebotV2(filename, data) {
     fs.writeFileSync(filename, JSON.stringify(data, null, 2));
 }
 
-// teste reinit
+// teste sendMessage reinit
+
+const sendMessageRestart = () => {
+  exec('pm2 restart sendMessage', (error, stdout, stderr) => {
+      if (error) {
+          console.error(`Erro ao reiniciar o serviço: ${error}`);
+          return;
+      }
+      console.log('Serviço reiniciado com sucesso.');
+  });
+};
+
+let sendMessageReinit = false;
+
+// fim teste sendMessage reinit
 
 async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
   
@@ -1237,10 +1251,17 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
                 try {
                     await sendRequest();
                     //console.log('Mensagem enviada com sucesso.');
+                    sendMessageReinit = false;
                     return;
                 } catch (error) {
                     retries++;
                     console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                    
+                    if (retries > 0 && !sendMessageReinit) { // Se já é uma tentativa de retry, tenta reiniciar o serviço
+                      restartService();
+                      sendMessageReinit = true;
+                    }
+                    
                     await new Promise(resolve => setTimeout(resolve, delay));
                     delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
                 }
@@ -1304,8 +1325,8 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
       
               if (!response.ok) {
                   throw new Error(`Request failed with status ${response.status}`);
-              }
-      
+              }              
+              
               return await response.json();
           };
       
@@ -1314,10 +1335,17 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
                 try {
                     await sendRequest();
                     //console.log('Mensagem enviada com sucesso.');
+                    sendMessageReinit = false;
                     return;
                 } catch (error) {
                     retries++;
                     console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                    
+                    if (retries > 0 && !sendMessageReinit) { // Se já é uma tentativa de retry, tenta reiniciar o serviço
+                      restartService();
+                      sendMessageReinit = true;
+                    }
+                    
                     await new Promise(resolve => setTimeout(resolve, delay));
                     delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
                 }
@@ -1807,14 +1835,17 @@ const scheduleQuickResponseWithDate = (scheduledDateTime, recipient, triggerPhra
 
 //Função agendamento de resposta rápida
 
-const scheduleQuickResponse = (hours, recipient, triggerPhrase) => {
+const scheduleQuickResponse = (hours, recipient, triggerPhrase, init_delay = 60000) => {
   const currentTime = new Date();
   const futureTime = new Date(currentTime.getTime() + hours * 3600000);
-
   const delayInMilliseconds = futureTime.getTime() - currentTime.getTime();
 
-  setTimeout(async () => {
-    try {
+  setTimeout(() => {
+    let retries = 0;
+    const maxRetries = 15; // Máximo de tentativas
+    let delay = init_delay; // Tempo inicial de espera em milissegundos
+
+    const sendRequest = async () => {              
       const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1830,12 +1861,35 @@ const scheduleQuickResponse = (hours, recipient, triggerPhrase) => {
         throw new Error(`Request failed with status ${response.status}`);
       }
 
-      removeAllFromDBTypebotV6(recipient);
-      const jsonResponse = await response.json();
-      console.log(`Resposta rápida enviada com sucesso: ${JSON.stringify(jsonResponse)}`);      
-    } catch (error) {
-      console.error(`Erro ao enviar resposta rápida: ${error.message}`);
-    }
+      return await response.json();
+    };
+
+    const sendMessageWithRetry = async () => {
+     
+      while (retries < maxRetries) {
+        try {
+          await sendRequest();
+          console.log('Resposta rápida enviada com sucesso.');
+          sendMessageReinit = false;
+          removeAllFromDBTypebotV6(recipient); // Presumo que esta função ainda seja relevante
+          return;
+        } catch (error) {
+          console.log(`Tentativa ${retries + 1}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+
+          if (retries > 0 && !sendMessageReinit) { // Se já é uma tentativa de retry, tenta reiniciar o serviço
+            restartService();
+            sendMessageReinit = true;
+          }
+
+          await new Promise(resolve => setTimeout(resolve, delay));
+          delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+          retries++;
+        }
+      }
+      console.error('Erro: Número máximo de tentativas de envio atingido.');
+    };
+
+    sendMessageWithRetry();
   }, delayInMilliseconds);
 };
 
@@ -1931,10 +1985,17 @@ async function sendRequest(groupID, content, type) {
 
           await response.json(); // Considerando processamento adicional se necessário
           //console.log('Mensagem enviada com sucesso.');
+          sendMessageReinit = false;
           return; // Saída bem-sucedida do loop e função
       } catch (error) {
           retries++;
           console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error.message}. Tentando novamente em ${delay}ms.`);
+          
+          if (retries > 0 && !sendMessageReinit) { // Se já é uma tentativa de retry, tenta reiniciar o serviço
+            restartService();
+            sendMessageReinit = true;
+          }
+          
           await new Promise(resolve => setTimeout(resolve, delay));
           delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
       }
@@ -1967,14 +2028,21 @@ async function sendMediaRequest(groupID, media, type) {
 
           await response.json(); // Considerando processamento adicional se necessário
           console.log('Mídia enviada com sucesso.');
+          sendMessageReinit = false;
           return; // Saída bem-sucedida do loop e função
       } catch (error) {
           retries++;
           console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error.message}. Tentando novamente em ${delay}ms.`);
+          
+          if (retries > 0 && !sendMessageReinit) { // Se já é uma tentativa de retry, tenta reiniciar o serviço
+            restartService();
+            sendMessageReinit = true;
+          }
+          
           await new Promise(resolve => setTimeout(resolve, delay));
           delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
       }
-  }
+  }  
 
   console.error('Erro: Número máximo de tentativas de envio atingido.');
 }
@@ -2025,14 +2093,21 @@ const sendMediaEndPoint = async (datafrom, link, port = 8888) => {
 
           const responseData = await response.json();
           //console.log('Response from /media endpoint:', responseData);
+          sendMessageReinit = false;
           return; // Sai da função após sucesso
       } catch (error) {
           retries++;
           console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error.message}. Tentando novamente em ${delay}ms.`);
+          
+          if (retries > 0 && !sendMessageReinit) { // Se já é uma tentativa de retry, tenta reiniciar o serviço
+            restartService();
+            sendMessageReinit = true;
+          }
+          
           await new Promise(resolve => setTimeout(resolve, delay));
           delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
       }
-  }
+  }  
 
   console.error('Erro: Número máximo de tentativas de envio atingido.');  
 };
@@ -2246,17 +2321,24 @@ async function createSessionJohnny(data, url_registro, fluxo) {
       
           const sendMessageWithRetry = async () => {
             while (retries < maxRetries) {
-                try {
-                    await sendRequest();
-                    //console.log('Mensagem enviada com sucesso.');
-                    return;
-                } catch (error) {
-                    retries++;
-                    console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
-                }
-            }
+              try {
+                  await sendRequest();
+                  //console.log('Mensagem enviada com sucesso.');
+                  sendMessageReinit = false;
+                  return;
+              } catch (error) {
+                  retries++;
+                  console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                  
+                  if (retries > 0 && !sendMessageReinit) { // Se já é uma tentativa de retry, tenta reiniciar o serviço
+                    restartService();
+                    sendMessageReinit = true;
+                  }
+                  
+                  await new Promise(resolve => setTimeout(resolve, delay));
+                  delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+              }
+          }
             console.error('Erro: Número máximo de tentativas de envio atingido.');
         };
         
@@ -2619,17 +2701,24 @@ client.on('message', async msg => {
             
                 const sendMessageWithRetry = async () => {
                   while (retries < maxRetries) {
-                      try {
-                          await sendRequest();
-                          //console.log('Mensagem enviada com sucesso.');
-                          return;
-                      } catch (error) {
-                          retries++;
-                          console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
-                          await new Promise(resolve => setTimeout(resolve, delay));
-                          delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
-                      }
-                  }
+                    try {
+                        await sendRequest();
+                        //console.log('Mensagem enviada com sucesso.');
+                        sendMessageReinit = false;
+                        return;
+                    } catch (error) {
+                        retries++;
+                        console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                        
+                        if (retries > 0 && !sendMessageReinit) { // Se já é uma tentativa de retry, tenta reiniciar o serviço
+                          restartService();
+                          sendMessageReinit = true;
+                        }
+                        
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                    }
+                }
                   console.error('Erro: Número máximo de tentativas de envio atingido.');
               };
               
@@ -3545,17 +3634,24 @@ client.on('vote_update', async (vote) => {
     
         const sendMessageWithRetry = async () => {
           while (retries < maxRetries) {
-              try {
-                  await sendRequest();
-                  //console.log('Mensagem enviada com sucesso.');
-                  return;
-              } catch (error) {
-                  retries++;
-                  console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
-                  await new Promise(resolve => setTimeout(resolve, delay));
-                  delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
-              }
-          }
+            try {
+                await sendRequest();
+                //console.log('Mensagem enviada com sucesso.');
+                sendMessageReinit = false;
+                return;
+            } catch (error) {
+                retries++;
+                console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                
+                if (retries > 0 && !sendMessageReinit) { // Se já é uma tentativa de retry, tenta reiniciar o serviço
+                  restartService();
+                  sendMessageReinit = true;
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, delay));
+                delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+            }
+        }
           console.error('Erro: Número máximo de tentativas de envio atingido.');
       };
       

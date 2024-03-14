@@ -1296,7 +1296,7 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
 
                   // Adicionando o objeto ao banco de dados V6
                   addToDBTypebotV6(recipient, agendamentoConfig);
-                  deleteObject(datafrom);
+                  //deleteObject(datafrom);
               } else {
                   console.error('Erro: Argumentos inválidos para o comando !rapidaagendada.');
               }
@@ -2284,7 +2284,7 @@ async function createSessionJohnny(data, url_registro, fluxo) {
 
                   // Adicionando o objeto ao banco de dados V6
                   addToDBTypebotV6(recipient, agendamentoConfig);
-                  deleteObject(data.from);
+                  //deleteObject(data.from);
               } else {
                   console.error('Erro: Argumentos inválidos para o comando !rapidaagendada.');
               }
@@ -2665,7 +2665,7 @@ client.on('message', async msg => {
 
                         // Adicionando o objeto ao banco de dados V6
                         addToDBTypebotV6(recipient, agendamentoConfig);
-                        deleteObject(msg.from);
+                        //deleteObject(msg.from);
                     } else {
                         console.error('Erro: Argumentos inválidos para o comando !rapidaagendada.');
                     }
@@ -3599,7 +3599,7 @@ client.on('vote_update', async (vote) => {
 
                   // Adicionando o objeto ao banco de dados V6
                   addToDBTypebotV6(recipient, agendamentoConfig);
-                  deleteObject(vote.voter);
+                  //deleteObject(vote.voter);
             } else {
                 console.error('Erro: Argumentos inválidos para o comando !rapidaagendada.');
             }

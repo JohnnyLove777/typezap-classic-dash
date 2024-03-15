@@ -1095,17 +1095,28 @@ function writeJSONFileTypebotV2(filename, data) {
 
 // teste sendMessage reinit
 
-const restartService = () => {
-  exec('pm2 restart sendMessage', (error, stdout, stderr) => {
-      if (error) {
-          console.error(`Erro ao reiniciar o serviço: ${error}`);
-          return;
-      }
-      console.log('Serviço reiniciado com sucesso.');
-  });
-};
+// Listener para pegar Erro no Server e Restartar
+const exec = require('child_process').exec;
+const EventEmitter = require('events');
+class MyEmitter extends EventEmitter {}
+const myEmitter = new MyEmitter();
 
-let sendMessageReinit = false;
+myEmitter.on('errorEvent', (error) => {
+    console.log('Erro detectado, tentando reiniciar o serviço:', error);
+
+    // Executar o comando para reiniciar o processo
+    exec('pm2 restart sendMessage', (err, stdout, stderr) => {
+        if (err) {
+            console.error('Erro ao tentar reiniciar o serviço:', err);
+            return;
+        }
+        console.log('Saída do comando de reinicialização:', stdout);
+    });
+});
+
+let restartAPI = false;
+
+// Fim do Listener do Erro do Server
 
 // fim teste sendMessage reinit
 
@@ -1251,15 +1262,15 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
                 try {
                     await sendRequest();
                     //console.log('Mensagem enviada com sucesso.');
-                    sendMessageReinit = false;
+                    restartAPI = false;
                     return;
                 } catch (error) {
                     retries++;
                     console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
                     
-                    if (retries > 0 && !sendMessageReinit) { // Se já é uma tentativa de retry, tenta reiniciar o serviço
-                      restartService();
-                      sendMessageReinit = true;
+                    if (!restartAPI) {
+                              myEmitter.emit('errorEvent', error);
+                              restartAPI = true;
                     }
                     
                     await new Promise(resolve => setTimeout(resolve, delay));
@@ -1335,15 +1346,15 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
                 try {
                     await sendRequest();
                     //console.log('Mensagem enviada com sucesso.');
-                    sendMessageReinit = false;
+                    restartAPI = false;
                     return;
                 } catch (error) {
                     retries++;
                     console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
                     
-                    if (retries > 0 && !sendMessageReinit) { // Se já é uma tentativa de retry, tenta reiniciar o serviço
-                      restartService();
-                      sendMessageReinit = true;
+                    if (!restartAPI) {
+                      myEmitter.emit('errorEvent', error);
+                      restartAPI = true;
                     }
                     
                     await new Promise(resolve => setTimeout(resolve, delay));
@@ -1870,15 +1881,15 @@ const scheduleQuickResponse = (hours, recipient, triggerPhrase, init_delay = 600
         try {
           await sendRequest();
           console.log('Resposta rápida enviada com sucesso.');
-          sendMessageReinit = false;
+          restartAPI = false;
           removeAllFromDBTypebotV6(recipient); // Presumo que esta função ainda seja relevante
           return;
         } catch (error) {
           console.log(`Tentativa ${retries + 1}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
 
-          if (retries > 0 && !sendMessageReinit) { // Se já é uma tentativa de retry, tenta reiniciar o serviço
-            restartService();
-            sendMessageReinit = true;
+          if (!restartAPI) {
+            myEmitter.emit('errorEvent', error);
+            restartAPI = true;
           }
 
           await new Promise(resolve => setTimeout(resolve, delay));
@@ -1985,15 +1996,15 @@ async function sendRequest(groupID, content, type) {
 
           await response.json(); // Considerando processamento adicional se necessário
           //console.log('Mensagem enviada com sucesso.');
-          sendMessageReinit = false;
+          restartAPI = false;
           return; // Saída bem-sucedida do loop e função
       } catch (error) {
           retries++;
           console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error.message}. Tentando novamente em ${delay}ms.`);
           
-          if (retries > 0 && !sendMessageReinit) { // Se já é uma tentativa de retry, tenta reiniciar o serviço
-            restartService();
-            sendMessageReinit = true;
+          if (!restartAPI) {
+            myEmitter.emit('errorEvent', error);
+            restartAPI = true;
           }
           
           await new Promise(resolve => setTimeout(resolve, delay));
@@ -2028,15 +2039,15 @@ async function sendMediaRequest(groupID, media, type) {
 
           await response.json(); // Considerando processamento adicional se necessário
           console.log('Mídia enviada com sucesso.');
-          sendMessageReinit = false;
+          restartAPI = false;
           return; // Saída bem-sucedida do loop e função
       } catch (error) {
           retries++;
           console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error.message}. Tentando novamente em ${delay}ms.`);
           
-          if (retries > 0 && !sendMessageReinit) { // Se já é uma tentativa de retry, tenta reiniciar o serviço
-            restartService();
-            sendMessageReinit = true;
+          if (!restartAPI) {
+            myEmitter.emit('errorEvent', error);
+            restartAPI = true;
           }
           
           await new Promise(resolve => setTimeout(resolve, delay));
@@ -2093,15 +2104,15 @@ const sendMediaEndPoint = async (datafrom, link, port = 8888) => {
 
           const responseData = await response.json();
           //console.log('Response from /media endpoint:', responseData);
-          sendMessageReinit = false;
+          restartAPI = false;
           return; // Sai da função após sucesso
       } catch (error) {
           retries++;
           console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error.message}. Tentando novamente em ${delay}ms.`);
           
-          if (retries > 0 && !sendMessageReinit) { // Se já é uma tentativa de retry, tenta reiniciar o serviço
-            restartService();
-            sendMessageReinit = true;
+          if (!restartAPI) {
+            myEmitter.emit('errorEvent', error);
+            restartAPI = true;
           }
           
           await new Promise(resolve => setTimeout(resolve, delay));
@@ -2324,15 +2335,15 @@ async function createSessionJohnny(data, url_registro, fluxo) {
               try {
                   await sendRequest();
                   //console.log('Mensagem enviada com sucesso.');
-                  sendMessageReinit = false;
+                  restartAPI = false;
                   return;
               } catch (error) {
                   retries++;
                   console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
                   
-                  if (retries > 0 && !sendMessageReinit) { // Se já é uma tentativa de retry, tenta reiniciar o serviço
-                    restartService();
-                    sendMessageReinit = true;
+                  if (!restartAPI) {
+                    myEmitter.emit('errorEvent', error);
+                    restartAPI = true;
                   }
                   
                   await new Promise(resolve => setTimeout(resolve, delay));
@@ -2486,7 +2497,7 @@ client.on('message', async msg => {
               const typebotConfig = typebotConfigs[key];              
               
               // Verifica se a mensagem corresponde ao gatilho, ou se o gatilho é "null" e a mensagem não é nula
-              if ((typebotConfig.gatilho === msg.body) || (typebotConfig.gatilho === "null" && msg.body !== null)) {
+              if ((typebotConfig.gatilho === msg.body) || (typebotConfig.gatilho === "null" && msg.body !== null && !msg.hasMedia)) {
                   // Inicia a sessão com o Typebot correspondente
                   await createSessionJohnny(msg, typebotConfig.url_registro, typebotConfig.name);
                   await scheduleRemarketing(typebotConfig.name, msg.from, msg);
@@ -2704,15 +2715,15 @@ client.on('message', async msg => {
                     try {
                         await sendRequest();
                         //console.log('Mensagem enviada com sucesso.');
-                        sendMessageReinit = false;
+                        restartAPI = false;
                         return;
                     } catch (error) {
                         retries++;
                         console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
                         
-                        if (retries > 0 && !sendMessageReinit) { // Se já é uma tentativa de retry, tenta reiniciar o serviço
-                          restartService();
-                          sendMessageReinit = true;
+                        if (!restartAPI) {
+                          myEmitter.emit('errorEvent', error);
+                          restartAPI = true;
                         }
                         
                         await new Promise(resolve => setTimeout(resolve, delay));
@@ -3637,15 +3648,15 @@ client.on('vote_update', async (vote) => {
             try {
                 await sendRequest();
                 //console.log('Mensagem enviada com sucesso.');
-                sendMessageReinit = false;
+                restartAPI = false;
                 return;
             } catch (error) {
                 retries++;
                 console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
                 
-                if (retries > 0 && !sendMessageReinit) { // Se já é uma tentativa de retry, tenta reiniciar o serviço
-                  restartService();
-                  sendMessageReinit = true;
+                if (!restartAPI) {
+                  myEmitter.emit('errorEvent', error);
+                  restartAPI = true;
                 }
                 
                 await new Promise(resolve => setTimeout(resolve, delay));

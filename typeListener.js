@@ -1095,7 +1095,7 @@ function writeJSONFileTypebotV2(filename, data) {
 
 // teste sendMessage reinit
 
-const sendMessageRestart = () => {
+const restartService = () => {
   exec('pm2 restart sendMessage', (error, stdout, stderr) => {
       if (error) {
           console.error(`Erro ao reiniciar o serviço: ${error}`);

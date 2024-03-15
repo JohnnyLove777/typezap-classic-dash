@@ -2497,7 +2497,7 @@ client.on('message', async msg => {
               const typebotConfig = typebotConfigs[key];              
               
               // Verifica se a mensagem corresponde ao gatilho, ou se o gatilho é "null" e a mensagem não é nula
-              if ((typebotConfig.gatilho === msg.body) || (typebotConfig.gatilho === "null" && msg.body !== null)) {
+              if ((typebotConfig.gatilho === msg.body) || (typebotConfig.gatilho === "null" && msg.body !== null && !msg.hasMedia)) {
                   // Inicia a sessão com o Typebot correspondente
                   await createSessionJohnny(msg, typebotConfig.url_registro, typebotConfig.name);
                   await scheduleRemarketing(typebotConfig.name, msg.from, msg);

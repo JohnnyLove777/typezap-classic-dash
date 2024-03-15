@@ -2154,6 +2154,10 @@ async function createSessionJohnny(data, url_registro, fluxo) {
     const response = await axios.request(config);
 
     const messages = response.data.messages;
+
+    if (!existsDB(data.from)) {
+      addObject(data.from, response.data.sessionId, data.from.replace(/\D/g, ''), JSON.stringify(data.id.id), 'typing', fluxo, false, "active", db_length);
+    }    
     
     for (const message of messages){
       if (!["text", "image", "audio", "video"].includes(message.type)) {
@@ -2382,10 +2386,14 @@ async function createSessionJohnny(data, url_registro, fluxo) {
           await sendMessage(data.from, new Poll('*Escolha uma resposta:*', arrayoptions));
         }
     }
-    if (!existsDB(data.from)) {
-      addObject(data.from, response.data.sessionId, data.from.replace(/\D/g, ''), JSON.stringify(data.id.id), 'done', fluxo, false, "active", db_length);
-    }
     
+    if(existsDB(data.from)){
+      updateSessionId(data.from, response.data.sessionId);
+      updateId(data.from, JSON.stringify(data.id.id));
+      updateInteract(data.from, 'done');
+      updateFlow(data.from, "active");
+      updateName(data.from, fluxo);
+    }     
   } catch (error) {
     console.log(error);
   }

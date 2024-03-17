@@ -59,7 +59,13 @@ npm run install-deps
 
 # Iniciar a aplicação usando PM2
 echo "Iniciando a aplicação com PM2..."
-pm2 start ecosystem.config.js
+
+# Iniciar o script sendMessage.js com pm2
+pm2 start sendMessage.js
+
+# Iniciar o script typeListener.js com pm2
+pm2 start typeListener.js
+
 
 # Mensagem de conclusão
 echo "====================="

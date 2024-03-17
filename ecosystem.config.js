@@ -13,8 +13,8 @@ module.exports = {
       name: 'sendMessage',
       script: 'sendMessage.js',
       instances: 1,
-      watch: false,       
-      max_memory_restart: '200M'
+      autorestart: false,
+      watch: false
     }
   ]
 };

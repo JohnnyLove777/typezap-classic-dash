@@ -63,7 +63,7 @@ async function sendMessage(phoneNumber, messageToSend) {
 
 const delay = ms => new Promise(res => setTimeout(res, ms));
 
-console.log("Bem-vindo ao TypeZap 1.3 - A Integração mais completa Typebot + Whatsapp!");
+console.log("Bem-vindo ao JohnnyZap 1.3 - A Integração mais completa Typebot + Whatsapp!");
 console.log(`Nome da sessão: ${sessao}`);
 
 // Listener WebSocket do frontend
@@ -202,15 +202,15 @@ wss.on('connection', function connection(ws) {
     try {
       const parsedMessage = JSON.parse(message);
       
-      // Verificar se a ação é de registrar TypeZap
+      // Verificar se a ação é de registrar JohnnyZap
       if (parsedMessage.action === 'registerTypeZap') {
         const { url } = parsedMessage.data;
-        //console.log(`Registrando TypeZap com URL: ${url}, Chave da API OpenAI: ${openAIKey}, Chave da ElevenLabs: ${elevenLabsKey}`);
+        //console.log(`Registrando JohnnyZap com URL: ${url}, Chave da API OpenAI: ${openAIKey}, Chave da ElevenLabs: ${elevenLabsKey}`);
         
           //if ((url.startsWith('http://') || url.startsWith('https://')) && openAIKey.startsWith('sk-') && elevenLabsKey.length === 32) {
           // Se todas as verificações passarem, prossegue com o registro
           addObjectSystem(url);
-          ws.send('TypeZap registrado com sucesso! Pow pow tei tei, pra cima deles!!');
+          ws.send('JohnnyZap registrado com sucesso! Pow pow tei tei, pra cima deles!!');
           //}
              
       }
@@ -254,7 +254,7 @@ wss.on('connection', function connection(ws) {
       else if (parsedMessage.action === 'confirmarAdicao') {
         //console.log('Apertou botão para confirmar adição');
         const { url, nome, gatilho } = parsedMessage.data;
-        //console.log(`Registrando TypeZap com URL: ${url}, Nome do Fluxo: ${nome}, Gatilho do Fluxo: ${gatilho}`);        
+        //console.log(`Registrando JohnnyZap com URL: ${url}, Nome do Fluxo: ${nome}, Gatilho do Fluxo: ${gatilho}`);        
         const typebotConfig = {
           url_registro: url,
           gatilho: gatilho,
@@ -2899,7 +2899,7 @@ client.on('message_create', async (msg) => {
   if (msg.fromMe && msg.body.startsWith('!help') && msg.to === msg.from) {        
     
     // Chamar sendRequest ao invés de client.sendMessage
-    await sendRequest(msg.from, `*Sistema de Controle v1.0 - TypeZap*
+    await sendRequest(msg.from, `*Sistema de Controle v1.0 - JohnnyZap*
   
   *Preparar Typebot (primeira ação)*
   Comando: "!ativar"
@@ -2939,7 +2939,7 @@ client.on('message_create', async (msg) => {
   } 
     // Configurar Main Infos do Systema
   if (msg.fromMe && msg.body === "!ativar" && !existsTheDBSystem() && msg.to === msg.from) {
-      await sendRequest(msg.from, `*Vamos preparar o seu TypeZap*
+      await sendRequest(msg.from, `*Vamos preparar o seu JohnnyZap*
   
   Insira a URL do seu Typebot, por exemplo:
   https://seutypebot.vm.elestio.app/api/v1/sessions/`, "text");

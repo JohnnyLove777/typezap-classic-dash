@@ -7,7 +7,7 @@ echo "Certifique-se de acessar a sua VPS com acesso root e ajustar configuraçõ
 echo "====================="
 
 # Marcador de início
-echo "Iniciando Instalação do TypeZap do Johnny"
+echo "Iniciando Instalação do JohnnyZap do Johnny"
 
 # Atualizar os pacotes do sistema
 echo "Atualizando pacotes do sistema..."
@@ -69,13 +69,13 @@ pm2 start typeListener.js
 
 # Mensagem de conclusão
 echo "====================="
-echo "TypeZap instalado!! =)"
+echo "JohnnyZap instalado!! =)"
 echo "====================="
 echo "Agora acesse:"
 echo "http://ip_da_sua_vps:8081 - Leia o QRCode"
 echo "http://ip_da_sua_vps:8083 - Leia o QRCode"
 echo ""
-echo "Então vá ao Dashboard do TypeZap com:"
+echo "Então vá ao Dashboard do JohnnyZap com:"
 echo "http://ip_da_sua_vps:8080"
 echo "usuario: aluno"
 echo "senha: alunoJohnny"

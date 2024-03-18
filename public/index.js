@@ -766,7 +766,7 @@ document.addEventListener('DOMContentLoaded', attachEventListeners);
                 // Substituir o conteúdo de mainContent pela seção com botões para abrir as páginas de QR Code
                 mainContent.innerHTML = `
                 <div id="ativarQRCode">
-                    <h2>Ativação de Instâncias do TypeZap</h2>
+                    <h2>Ativação de Instâncias do JohnnyZap</h2>
                     <p>Use os botões abaixo para ativar as instâncias de escuta e envio de mensagens.</p>
                     <div class="button-container" style="margin-top: 20px; display: flex; justify-content: space-around;">
                         <button onclick="window.open('typeListenerQR.html', '_blank')">Ativar Listener QR Code</button>
@@ -779,22 +779,22 @@ document.addEventListener('DOMContentLoaded', attachEventListeners);
             }*/
                                             
 
-            // Verificar se o link clicado é "Ativar meu TypeZap"
-            if (sectionName === "Ativar meu TypeZap") {
+            // Verificar se o link clicado é "Ativar meu JohnnyZap"
+            if (sectionName === "Ativar meu JohnnyZap") {
                 // Substituir o conteúdo de mainContent pelo formulário de ativação
                 mainContent.innerHTML = `
                     <div id="ativarTypeZap">
-                        <h2>Ativar meu TypeZap</h2>
-                        <p>Insira as informações necessárias para ativar seu TypeZap.</p>
-                        <label for="urlField">URL do TypeZap:</label>
-                        <input type="text" id="urlField" placeholder="URL do seu TypeZap">
-                        <small>Endereço URL para conectar o TypeZap.</small><br>
-                        <button id="registerTypeZap">Registrar TypeZap</button>
+                        <h2>Ativar meu JohnnyZap</h2>
+                        <p>Insira as informações necessárias para ativar seu JohnnyZap.</p>
+                        <label for="urlField">URL do JohnnyZap:</label>
+                        <input type="text" id="urlField" placeholder="http://seu_ip:3002/api/v1/sessions/">
+                        <small>Endereço URL para conectar o JohnnyZap.</small><br>
+                        <button id="registerTypeZap">Registrar JohnnyZap</button>
                         <div id="response" style="margin-top: 20px;"></div>
                     </div>
                 `;
 
-                // Adiciona o listener para o botão "Registrar TypeZap"
+                // Adiciona o listener para o botão "Registrar JohnnyZap"
                 document.getElementById('registerTypeZap').addEventListener('click', function() {
                     const url = document.getElementById('urlField').value;                    
 
@@ -807,7 +807,7 @@ document.addEventListener('DOMContentLoaded', attachEventListeners);
         return; // Interrompe a execução para evitar o envio dos dados
     }  
     
-    alert('Seu TypeZap foi registrado com sucesso!');
+    alert('Seu JohnnyZap foi registrado com sucesso!');
          
                     ws.send(JSON.stringify({
                         action: 'registerTypeZap',

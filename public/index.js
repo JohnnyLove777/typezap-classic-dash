@@ -654,6 +654,41 @@ function attachEventListeners() {
         });
     }
 
+    // Listener para o botão de upload de arquivo de mídia
+const uploadButtonMidia = document.getElementById('uploadButtonMidia');
+    if (uploadButtonMidia) {
+    uploadButtonMidia.addEventListener('click', function() {
+        const fileInputMidia = document.getElementById('fileInputMidia');
+        const fileMidia = fileInputMidia.files[0];
+
+        if (fileMidia) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                // Envia o arquivo de mídia
+                ws.send(JSON.stringify({
+                    action: 'uploadMedia',
+                    fileName: fileMidia.name,
+                    data: content
+                }));
+            };
+            reader.readAsDataURL(fileMidia); // Usamos readAsDataURL para obter o conteúdo do arquivo em base64
+            alert('Arquivo de mídia enviado com sucesso!');
+        } else {
+            alert('Por favor, selecione um arquivo de mídia para carregar.');
+        }
+    });
+    }
+
+// Listener para atualizar o texto ao selecionar um arquivo de mídia
+const fileInputMidia = document.getElementById('fileInputMidia');
+    if (fileInputMidia) {
+    fileInputMidia.addEventListener('change', function() {
+        const fileNameMidia = this.files && this.files.length > 0 ? this.files[0].name : 'Nenhum arquivo selecionado';
+        document.getElementById('fileUploadTextMidia').innerText = fileNameMidia;
+    });
+    }
+
     // Adiciona o listener para o botão "Iniciar Campanha"
 const iniciarCampanhaBtn = document.getElementById('iniciarCampanha');
 if (iniciarCampanhaBtn) {
@@ -953,6 +988,24 @@ document.addEventListener('DOMContentLoaded', attachEventListeners);
                 // Re-atacha event listeners para os botões recém-criados
         attachEventListeners();                
             }
+
+            if (sectionName === "Carregar Arquivo de Mídia") {
+                mainContent.innerHTML = `
+                    <div id="carregarArquivoMidia">
+                        <h2>Carregar Arquivo de Mídia</h2>
+                        <div class="file-upload-wrapper">
+                            <input type="file" id="fileInputMidia" class="file-upload-input" accept="image/*, audio/*, application/pdf">
+                            <label for="fileInputMidia" class="file-upload-button">Selecione o Arquivo</label>
+                            <div id="fileUploadTextMidia" class="file-upload-text">Nenhum arquivo selecionado</div>
+                        </div>
+                        <button id="uploadButtonMidia">Enviar Midia</button>
+                    </div>
+                `;
+                
+                // Re-atacha event listeners para os botões recém-criados
+                attachEventListeners();
+            }
+                       
 
             if(sectionName === "Disparo de Mensagens em Massa"){
 

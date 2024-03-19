@@ -451,6 +451,55 @@ app.post('/media', async (req, res) => {
   }
 });
 
+app.post('/medialocal', async (req, res) => {
+  const { destinatario, token, nomeArquivo } = req.body;
+
+  // Conferir o token
+  if (token !== SECURITY_TOKEN) {
+      return res.status(401).json({ status: 'falha', mensagem: 'Token inválido' });
+  }
+
+  try {
+      // Construir o caminho do arquivo
+      const filePath = path.resolve(__dirname, 'media', nomeArquivo);
+
+      // Verifica se o arquivo existe
+      if (!fs.existsSync(filePath)) {
+          return res.status(404).json({ status: 'falha', mensagem: 'Arquivo não encontrado' });
+      }
+
+      // Carregar o arquivo da pasta
+      const media = MessageMedia.fromFilePath(filePath);
+      const extension = path.extname(filePath).toLowerCase();
+      const audioExtensions = ['.mp3', '.wav', '.ogg', '.opus'];
+
+      if (audioExtensions.includes(extension) && destinatario.endsWith('@c.us')) {
+          // Se a mídia é áudio, então envie como áudio
+          const destinatarioId = await client.getNumberId(destinatario);
+    
+          if (destinatarioId) {
+              // Obtém o chat pelo ID do destinatário.
+              const chat = await client.getChatById(destinatarioId._serialized);
+      
+              // Simula gravação de áudio no chat.
+              await chat.sendStateRecording();    
+              
+              await sendAudioWithRetry(destinatario, media);            
+          } else {
+              console.log('Número não está registrado no WhatsApp.');
+          }
+      } else {
+          // Caso contrário, envie como mensagem normal
+          await sendMessageWithRetry(destinatario, media);
+      }
+
+      res.json({ status: 'sucesso', mensagem: 'Mídia enviada com sucesso' });
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ status: 'falha', mensagem: 'Erro ao enviar mídia' });
+  }
+});
+
 // Método /media
 
 // Método Kiwify

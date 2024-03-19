@@ -415,6 +415,27 @@ wss.on('connection', function connection(ws) {
             }
         });
       }
+      else if (parsedMessage.action === 'uploadMedia') {
+        const mediaData = parsedMessage.data;
+        const fileName = parsedMessage.fileName; // Extrai o nome do arquivo da mensagem
+        const dir = 'mediaFiles';
+        
+        // Verifica se o diretório existe e, se não, cria-o de forma recursiva
+        if (!fs.existsSync(dir)){
+            fs.mkdirSync(dir, { recursive: true });
+        }
+    
+        // Escreve o arquivo de mídia
+        fs.writeFile(`${dir}/${fileName}`, mediaData, 'base64', (err) => {
+            if (err) {
+                console.error('Erro ao salvar o arquivo de mídia', err);
+                ws.send(JSON.stringify({ action: 'error', message: 'Erro ao carregar o arquivo de mídia' }));
+            } else {
+                ws.send(JSON.stringify({ action: 'success', message: 'Arquivo de mídia carregado com sucesso' }));
+            }
+        });
+      }
+    
 
 
       else if (parsedMessage.action === 'iniciarCampanha') {
@@ -1222,9 +1243,9 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
         }
         if (formattedText.startsWith('!media')) {
           if (existsDB(datafrom)) {
-              // Extrai o link que vem depois do primeiro espaço
-              const link = formattedText.split(' ')[1];
-              await sendMediaEndPoint(datafrom, link); // Envia a requisição com retry
+              // Extrai o nome do arquivo que vem depois do primeiro espaço
+              const arquivo = formattedText.split(' ')[1];
+              await sendMediaLocalEndPoint(datafrom, arquivo); // Envia a requisição com retry
           }
         }        
         /*if (formattedText.startsWith('!myself')) {
@@ -2123,6 +2144,48 @@ const sendMediaEndPoint = async (datafrom, link, port = 8888) => {
   console.error('Erro: Número máximo de tentativas de envio atingido.');  
 };
 
+const sendMediaLocalEndPoint = async (destinatario, nomeArquivo, port = 8888) => {
+  let retries = 0;
+  const maxRetries = 8; // Máximo de tentativas de envio
+  let delay = 60000; // Tempo inicial de espera em milissegundos (1 segundo)
+
+  while (retries < maxRetries) {
+      try {
+          const response = await fetch(`http://localhost:${port}/medialocal`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  destinatario: destinatario,
+                  token: token, // Substitua pelo seu token de segurança real
+                  nomeArquivo: nomeArquivo // Nome do arquivo a ser enviado
+              })
+          });
+
+          if (!response.ok) {
+              throw new Error(`Request failed with status ${response.status}`);
+          }
+
+          const responseData = await response.json();
+          //console.log('Response from /medialocal endpoint:', responseData);
+          restartAPI = false;
+          return; // Sai da função após sucesso
+      } catch (error) {
+          retries++;
+          console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error.message}. Tentando novamente em ${delay}ms.`);
+          
+          if (!restartAPI) {
+              myEmitter.emit('errorEvent', error);
+              restartAPI = true;
+          }
+          
+          await new Promise(resolve => setTimeout(resolve, delay));
+          delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+      }
+  }  
+
+  console.error('Erro: Número máximo de tentativas de envio atingido.');  
+};
+
 // Final das rotinas de disparo para Grupos
 
 async function createSessionJohnny(data, url_registro, fluxo) {
@@ -2222,9 +2285,9 @@ async function createSessionJohnny(data, url_registro, fluxo) {
         }
         if (formattedText.startsWith('!media')) {
           if (existsDB(data.from)) {
-              // Extrai o link que vem depois do primeiro espaço
-              const link = formattedText.split(' ')[1];
-              await sendMediaEndPoint(data.from, link); // Envia a requisição com retry
+              // Extrai o nome do arquivo que vem depois do primeiro espaço
+              const arquivo = formattedText.split(' ')[1];
+              await sendMediaLocalEndPoint(data.from, arquivo); // Envia a requisição com retry
           }
         }
         /*if (formattedText.startsWith('!myself')) {
@@ -2607,9 +2670,9 @@ client.on('message', async msg => {
               }
               if (formattedText.startsWith('!media')) {
                 if (existsDB(msg.from)) {
-                    // Extrai o link que vem depois do primeiro espaço
-                    const link = formattedText.split(' ')[1];
-                    await sendMediaEndPoint(msg.from, link); // Envia a requisição com retry
+                    // Extrai o nome do arquivo que vem depois do primeiro espaço
+                    const arquivo = formattedText.split(' ')[1];
+                    await sendMediaLocalEndPoint(msg.from, arquivo); // Envia a requisição com retry
                 }
               }
               /*if (formattedText.startsWith('!myself')) {
@@ -3591,9 +3654,9 @@ client.on('vote_update', async (vote) => {
       }
       if (formattedText.startsWith('!media')) {
         if (existsDB(vote.voter)) {
-            // Extrai o link que vem depois do primeiro espaço
-            const link = formattedText.split(' ')[1];
-            await sendMediaEndPoint(vote.voter, link); // Envia a requisição com retry
+            // Extrai o nome do arquivo que vem depois do primeiro espaço
+            const arquivo = formattedText.split(' ')[1];
+            await sendMediaLocalEndPoint(vote.voter, arquivo); // Envia a requisição com retry
         }
       }
       if (formattedText.startsWith('!rapidaagendada')) {          

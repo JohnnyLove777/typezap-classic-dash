@@ -219,48 +219,19 @@ input[type="text"] {
 
 /* ... Continuação dos estilos adaptados conforme necessário ... */
 
-#carregarLeads {
+#carregarArquivoMidia {
     background-color: #222; /* Fundo mais escuro */
     padding: 20px;
     border-radius: 8px;
     margin: 30px auto;
     max-width: 600px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
     text-align: center;
 }
 
-#carregarLeads h2 {
+#carregarArquivoMidia h2 {
     color: #fff;
     margin-bottom: 20px;
-}
-
-#fileInput, #uploadButton {
-    width: 90%;
-    padding: 10px;
-    margin: 10px auto 20px;
-    display: inline-block;
-}
-
-#fileInput {
-    border: 1px solid #555;
-    border-radius: 4px;
-    background-color: #222;
-    color: white;
-}
-
-#uploadButton {
-    background-color: #4A90E2; /* Ajuste para estilo de botão */
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: background-color 0.3s, transform 0.3s;
-}
-
-#uploadButton:hover {
-    background-color: #57a1ff; /* Cor mais clara no hover */
-    transform: scale(1.05);
 }
 
 .file-upload-wrapper {
@@ -279,7 +250,7 @@ input[type="text"] {
     cursor: pointer;
 }
 
-.file-upload-button, #uploadButton {
+.file-upload-button, #uploadButtonMidia {
     display: block;
     width: calc(100% - 20px);
     margin: 10px auto;
@@ -293,7 +264,11 @@ input[type="text"] {
 }
 
 .file-upload-button {
-    background-color: #007bff;
+    background-color: #007bff; /* Azul padrão */
+}
+
+#uploadButtonMidia {
+    background-color: #4A90E2; /* Ajuste para estilo de botão */
 }
 
 .file-upload-text {
@@ -301,6 +276,12 @@ input[type="text"] {
     margin-top: 5px;
     font-size: 14px;
     color: #fff;
+}
+
+/* Estilização de hover para botões */
+.file-upload-button:hover, #uploadButtonMidia:hover {
+    background-color: #57a1ff; /* Cor mais clara no hover */
+    transform: scale(1.05);
 }
 
 #massMessageDispatch {

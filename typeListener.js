@@ -426,7 +426,7 @@ wss.on('connection', function connection(ws) {
         }
     
         // Escreve o arquivo de mídia
-        fs.writeFile(`${dir}/${fileName}`, mediaData, 'base64', (err) => {
+        fs.writeFile(`${dir}/${fileName}`, mediaData, (err) => {
             if (err) {
                 console.error('Erro ao salvar o arquivo de mídia', err);
                 ws.send(JSON.stringify({ action: 'error', message: 'Erro ao carregar o arquivo de mídia' }));
@@ -435,7 +435,6 @@ wss.on('connection', function connection(ws) {
             }
         });
       }
-    
 
 
       else if (parsedMessage.action === 'iniciarCampanha') {

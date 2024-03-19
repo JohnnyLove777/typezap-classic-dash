@@ -418,7 +418,7 @@ wss.on('connection', function connection(ws) {
       else if (parsedMessage.action === 'uploadMedia') {
         const mediaData = parsedMessage.data;
         const fileName = parsedMessage.fileName; // Extrai o nome do arquivo da mensagem
-        const dir = 'mediaFiles';
+        const dir = 'media';
         
         // Verifica se o diretório existe e, se não, cria-o de forma recursiva
         if (!fs.existsSync(dir)){

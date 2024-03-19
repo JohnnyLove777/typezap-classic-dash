@@ -669,10 +669,10 @@ const uploadButtonMidia = document.getElementById('uploadButtonMidia');
                 ws.send(JSON.stringify({
                     action: 'uploadMedia',
                     fileName: fileMidia.name,
-                    data: new Uint8Array(content) // Envia os dados como um array de bytes
+                    data: content
                 }));
             };
-            reader.readAsArrayBuffer(fileMidia); // Usamos readAsArrayBuffer para ler o arquivo como um array de bytes
+            reader.readAsDataURL(fileMidia); // Usamos readAsDataURL para obter o conteúdo do arquivo em base64
             alert('Arquivo de mídia enviado com sucesso!');
         } else {
             alert('Por favor, selecione um arquivo de mídia para carregar.');

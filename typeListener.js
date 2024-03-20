@@ -63,7 +63,7 @@ async function sendMessage(phoneNumber, messageToSend) {
 
 const delay = ms => new Promise(res => setTimeout(res, ms));
 
-console.log("Bem-vindo ao TypeZap 1.3 - A Integração mais completa Typebot + Whatsapp!");
+console.log("Bem-vindo ao JohnnyZap 1.3 - A Integração mais completa Typebot + Whatsapp!");
 console.log(`Nome da sessão: ${sessao}`);
 
 // Listener WebSocket do frontend
@@ -202,15 +202,15 @@ wss.on('connection', function connection(ws) {
     try {
       const parsedMessage = JSON.parse(message);
       
-      // Verificar se a ação é de registrar TypeZap
+      // Verificar se a ação é de registrar JohnnyZap
       if (parsedMessage.action === 'registerTypeZap') {
         const { url } = parsedMessage.data;
-        //console.log(`Registrando TypeZap com URL: ${url}, Chave da API OpenAI: ${openAIKey}, Chave da ElevenLabs: ${elevenLabsKey}`);
+        //console.log(`Registrando JohnnyZap com URL: ${url}, Chave da API OpenAI: ${openAIKey}, Chave da ElevenLabs: ${elevenLabsKey}`);
         
           //if ((url.startsWith('http://') || url.startsWith('https://')) && openAIKey.startsWith('sk-') && elevenLabsKey.length === 32) {
           // Se todas as verificações passarem, prossegue com o registro
           addObjectSystem(url);
-          ws.send('TypeZap registrado com sucesso! Pow pow tei tei, pra cima deles!!');
+          ws.send('JohnnyZap registrado com sucesso! Pow pow tei tei, pra cima deles!!');
           //}
              
       }
@@ -254,7 +254,7 @@ wss.on('connection', function connection(ws) {
       else if (parsedMessage.action === 'confirmarAdicao') {
         //console.log('Apertou botão para confirmar adição');
         const { url, nome, gatilho } = parsedMessage.data;
-        //console.log(`Registrando TypeZap com URL: ${url}, Nome do Fluxo: ${nome}, Gatilho do Fluxo: ${gatilho}`);        
+        //console.log(`Registrando JohnnyZap com URL: ${url}, Nome do Fluxo: ${nome}, Gatilho do Fluxo: ${gatilho}`);        
         const typebotConfig = {
           url_registro: url,
           gatilho: gatilho,
@@ -414,6 +414,38 @@ wss.on('connection', function connection(ws) {
                 ws.send(JSON.stringify({ action: 'success', message: 'Lista de leads carregada com sucesso' }));
             }
         });
+      }
+      else if (parsedMessage.action === 'uploadMedia') {
+        const mediaData = parsedMessage.data;
+        const fileName = parsedMessage.fileName; // Extrai o nome do arquivo da mensagem
+        const dir = 'media';
+        
+        // Verifica se o diretório existe e, se não, cria-o de forma recursiva
+        if (!fs.existsSync(dir)){
+            fs.mkdirSync(dir, { recursive: true });
+        }
+    
+        const filePath = `${dir}/${fileName}`;
+        
+        // Cria um fluxo de escrita de arquivo
+        const fileStream = fs.createWriteStream(filePath);
+    
+        // Evento de erro do fluxo de escrita
+        fileStream.on('error', (err) => {
+            console.error('Erro ao salvar o arquivo de mídia', err);
+            ws.send(JSON.stringify({ action: 'error', message: 'Erro ao carregar o arquivo de mídia' }));
+        });
+    
+        // Evento de finalização do fluxo de escrita
+        fileStream.on('finish', () => {
+            ws.send(JSON.stringify({ action: 'success', message: 'Arquivo de mídia carregado com sucesso' }));
+        });
+    
+        // Escreve os dados da mídia no arquivo utilizando o fluxo de escrita
+        fileStream.write(mediaData, 'base64');
+    
+        // Finaliza o fluxo de escrita
+        fileStream.end();
       }
 
 
@@ -1222,9 +1254,9 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
         }
         if (formattedText.startsWith('!media')) {
           if (existsDB(datafrom)) {
-              // Extrai o link que vem depois do primeiro espaço
-              const link = formattedText.split(' ')[1];
-              await sendMediaEndPoint(datafrom, link); // Envia a requisição com retry
+              // Extrai o nome do arquivo que vem depois do primeiro espaço
+              const arquivo = formattedText.split(' ')[1];
+              await sendMediaLocalEndPoint(datafrom, arquivo); // Envia a requisição com retry
           }
         }        
         /*if (formattedText.startsWith('!myself')) {
@@ -2123,6 +2155,48 @@ const sendMediaEndPoint = async (datafrom, link, port = 8888) => {
   console.error('Erro: Número máximo de tentativas de envio atingido.');  
 };
 
+const sendMediaLocalEndPoint = async (destinatario, nomeArquivo, port = 8888) => {
+  let retries = 0;
+  const maxRetries = 8; // Máximo de tentativas de envio
+  let delay = 60000; // Tempo inicial de espera em milissegundos (1 segundo)
+
+  while (retries < maxRetries) {
+      try {
+          const response = await fetch(`http://localhost:${port}/medialocal`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  destinatario: destinatario,
+                  token: token, // Substitua pelo seu token de segurança real
+                  nomeArquivo: nomeArquivo // Nome do arquivo a ser enviado
+              })
+          });
+
+          if (!response.ok) {
+              throw new Error(`Request failed with status ${response.status}`);
+          }
+
+          const responseData = await response.json();
+          //console.log('Response from /medialocal endpoint:', responseData);
+          restartAPI = false;
+          return; // Sai da função após sucesso
+      } catch (error) {
+          retries++;
+          console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error.message}. Tentando novamente em ${delay}ms.`);
+          
+          if (!restartAPI) {
+              myEmitter.emit('errorEvent', error);
+              restartAPI = true;
+          }
+          
+          await new Promise(resolve => setTimeout(resolve, delay));
+          delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+      }
+  }  
+
+  console.error('Erro: Número máximo de tentativas de envio atingido.');  
+};
+
 // Final das rotinas de disparo para Grupos
 
 async function createSessionJohnny(data, url_registro, fluxo) {
@@ -2222,9 +2296,9 @@ async function createSessionJohnny(data, url_registro, fluxo) {
         }
         if (formattedText.startsWith('!media')) {
           if (existsDB(data.from)) {
-              // Extrai o link que vem depois do primeiro espaço
-              const link = formattedText.split(' ')[1];
-              await sendMediaEndPoint(data.from, link); // Envia a requisição com retry
+              // Extrai o nome do arquivo que vem depois do primeiro espaço
+              const arquivo = formattedText.split(' ')[1];
+              await sendMediaLocalEndPoint(data.from, arquivo); // Envia a requisição com retry
           }
         }
         /*if (formattedText.startsWith('!myself')) {
@@ -2607,9 +2681,9 @@ client.on('message', async msg => {
               }
               if (formattedText.startsWith('!media')) {
                 if (existsDB(msg.from)) {
-                    // Extrai o link que vem depois do primeiro espaço
-                    const link = formattedText.split(' ')[1];
-                    await sendMediaEndPoint(msg.from, link); // Envia a requisição com retry
+                    // Extrai o nome do arquivo que vem depois do primeiro espaço
+                    const arquivo = formattedText.split(' ')[1];
+                    await sendMediaLocalEndPoint(msg.from, arquivo); // Envia a requisição com retry
                 }
               }
               /*if (formattedText.startsWith('!myself')) {
@@ -2899,7 +2973,7 @@ client.on('message_create', async (msg) => {
   if (msg.fromMe && msg.body.startsWith('!help') && msg.to === msg.from) {        
     
     // Chamar sendRequest ao invés de client.sendMessage
-    await sendRequest(msg.from, `*Sistema de Controle v1.0 - TypeZap*
+    await sendRequest(msg.from, `*Sistema de Controle v1.0 - JohnnyZap*
   
   *Preparar Typebot (primeira ação)*
   Comando: "!ativar"
@@ -2939,7 +3013,7 @@ client.on('message_create', async (msg) => {
   } 
     // Configurar Main Infos do Systema
   if (msg.fromMe && msg.body === "!ativar" && !existsTheDBSystem() && msg.to === msg.from) {
-      await sendRequest(msg.from, `*Vamos preparar o seu TypeZap*
+      await sendRequest(msg.from, `*Vamos preparar o seu JohnnyZap*
   
   Insira a URL do seu Typebot, por exemplo:
   https://seutypebot.vm.elestio.app/api/v1/sessions/`, "text");
@@ -3591,9 +3665,9 @@ client.on('vote_update', async (vote) => {
       }
       if (formattedText.startsWith('!media')) {
         if (existsDB(vote.voter)) {
-            // Extrai o link que vem depois do primeiro espaço
-            const link = formattedText.split(' ')[1];
-            await sendMediaEndPoint(vote.voter, link); // Envia a requisição com retry
+            // Extrai o nome do arquivo que vem depois do primeiro espaço
+            const arquivo = formattedText.split(' ')[1];
+            await sendMediaLocalEndPoint(vote.voter, arquivo); // Envia a requisição com retry
         }
       }
       if (formattedText.startsWith('!rapidaagendada')) {          

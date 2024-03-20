@@ -655,34 +655,31 @@ function attachEventListeners() {
     }
 
     // Listener para o botão de upload de arquivo de mídia
-    const uploadButtonMidia = document.getElementById('uploadButtonMidia');
+const uploadButtonMidia = document.getElementById('uploadButtonMidia');
     if (uploadButtonMidia) {
-        uploadButtonMidia.addEventListener('click', function() {
-            const fileInputMidia = document.getElementById('fileInputMidia');
-            const fileMidia = fileInputMidia.files[0];
-    
-            if (fileMidia) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const content = e.target.result;
-                    // Envia o arquivo de mídia
-                    ws.send(JSON.stringify({
-                        action: 'uploadMedia',
-                        fileName: fileMidia.name,
-                        data: content
-                    }));
-                };
-    
-                // Use readAsArrayBuffer para obter o conteúdo do arquivo como um buffer de bytes
-                reader.readAsArrayBuffer(fileMidia);
-    
-                alert('Arquivo de mídia enviado com sucesso!');
-            } else {
-                alert('Por favor, selecione um arquivo de mídia para carregar.');
-            }
-        });
+    uploadButtonMidia.addEventListener('click', function() {
+        const fileInputMidia = document.getElementById('fileInputMidia');
+        const fileMidia = fileInputMidia.files[0];
+
+        if (fileMidia) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                // Envia o arquivo de mídia
+                ws.send(JSON.stringify({
+                    action: 'uploadMedia',
+                    fileName: fileMidia.name,
+                    data: content
+                }));
+            };
+            reader.readAsDataURL(fileMidia); // Usamos readAsDataURL para obter o conteúdo do arquivo em base64
+            alert('Arquivo de mídia enviado com sucesso!');
+        } else {
+            alert('Por favor, selecione um arquivo de mídia para carregar.');
+        }
+    });
     }
-  
+
 // Listener para atualizar o texto ao selecionar um arquivo de mídia
 const fileInputMidia = document.getElementById('fileInputMidia');
     if (fileInputMidia) {
@@ -690,7 +687,7 @@ const fileInputMidia = document.getElementById('fileInputMidia');
         const fileNameMidia = this.files && this.files.length > 0 ? this.files[0].name : 'Nenhum arquivo selecionado';
         document.getElementById('fileUploadTextMidia').innerText = fileNameMidia;
     });
-    }
+}
 
 
     // Adiciona o listener para o botão "Iniciar Campanha"

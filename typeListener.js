@@ -6,7 +6,6 @@ const WebSocket = require('ws');
 const socketIo = require('socket.io');
 const QRCode = require('qrcode');
 const http = require('http');
-const mime = require('mime');
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
@@ -420,33 +419,19 @@ wss.on('connection', function connection(ws) {
         const mediaData = parsedMessage.data;
         const fileName = parsedMessage.fileName; // Extrai o nome do arquivo da mensagem
         const dir = 'media';
-    
-        // Obtém os metadados do arquivo
-        const fileStats = fs.statSync(mediaData);
-        const fileMetadata = {
-            fileName: fileName,
-            fileType: mime.getType(fileName),
-            fileSize: fileStats.size,
-            createdAt: fileStats.birthtime
-            // Adicione outros metadados conforme necessário
-        };
-    
-        // Combina os metadados com os dados da mídia
-        const preparedData = {
-            metadata: fileMetadata,
-            mediaData: mediaData
-        };
-    
-        // Converte os dados preparados em formato JSON
-        const preparedJSON = JSON.stringify(preparedData);
-    
+        
         // Verifica se o diretório existe e, se não, cria-o de forma recursiva
-        if (!fs.existsSync(dir)) {
+        if (!fs.existsSync(dir)){
             fs.mkdirSync(dir, { recursive: true });
         }
     
-        // Escreve o arquivo de mídia com metadados
-        fs.writeFile(`${dir}/${fileName}`, preparedJSON, (err) => {
+        const filePath = `${dir}/${fileName}`;
+        
+        // Cria um fluxo de escrita de arquivo
+        const fileStream = fs.createWriteStream(filePath);
+    
+        // Escreve os dados da mídia no arquivo utilizando o fluxo de escrita
+        fileStream.write(mediaData, 'base64', (err) => {
             if (err) {
                 console.error('Erro ao salvar o arquivo de mídia', err);
                 ws.send(JSON.stringify({ action: 'error', message: 'Erro ao carregar o arquivo de mídia' }));
@@ -454,8 +439,10 @@ wss.on('connection', function connection(ws) {
                 ws.send(JSON.stringify({ action: 'success', message: 'Arquivo de mídia carregado com sucesso' }));
             }
         });
-      }
     
+        // Finaliza o fluxo de escrita após a escrita estar completa
+        fileStream.end();
+      }
 
 
       else if (parsedMessage.action === 'iniciarCampanha') {

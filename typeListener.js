@@ -425,13 +425,8 @@ wss.on('connection', function connection(ws) {
             fs.mkdirSync(dir, { recursive: true });
         }
     
-        const filePath = `${dir}/${fileName}`;
-        
-        // Cria um fluxo de escrita de arquivo
-        const fileStream = fs.createWriteStream(filePath);
-    
-        // Escreve os dados da mídia no arquivo utilizando o fluxo de escrita
-        fileStream.write(mediaData, 'base64', (err) => {
+        // Escreve o arquivo de mídia
+        fs.writeFile(`${dir}/${fileName}`, mediaData, 'base64', (err) => {
             if (err) {
                 console.error('Erro ao salvar o arquivo de mídia', err);
                 ws.send(JSON.stringify({ action: 'error', message: 'Erro ao carregar o arquivo de mídia' }));
@@ -439,10 +434,8 @@ wss.on('connection', function connection(ws) {
                 ws.send(JSON.stringify({ action: 'success', message: 'Arquivo de mídia carregado com sucesso' }));
             }
         });
-    
-        // Finaliza o fluxo de escrita após a escrita estar completa
-        fileStream.end();
       }
+    
 
 
       else if (parsedMessage.action === 'iniciarCampanha') {

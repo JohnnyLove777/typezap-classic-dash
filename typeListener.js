@@ -430,21 +430,23 @@ wss.on('connection', function connection(ws) {
         // Cria um fluxo de escrita de arquivo
         const fileStream = fs.createWriteStream(filePath);
     
-        // Escreve os dados da mídia no arquivo utilizando o fluxo de escrita
-        fileStream.write(mediaData, 'base64', (err) => {
-            if (err) {
-                console.error('Erro ao salvar o arquivo de mídia', err);
-                ws.send(JSON.stringify({ action: 'error', message: 'Erro ao carregar o arquivo de mídia' }));
-            } else {
-                ws.send(JSON.stringify({ action: 'success', message: 'Arquivo de mídia carregado com sucesso' }));
-            }
+        // Evento de erro do fluxo de escrita
+        fileStream.on('error', (err) => {
+            console.error('Erro ao salvar o arquivo de mídia', err);
+            ws.send(JSON.stringify({ action: 'error', message: 'Erro ao carregar o arquivo de mídia' }));
         });
     
-        // Finaliza o fluxo de escrita após a escrita estar completa
+        // Evento de finalização do fluxo de escrita
+        fileStream.on('finish', () => {
+            ws.send(JSON.stringify({ action: 'success', message: 'Arquivo de mídia carregado com sucesso' }));
+        });
+    
+        // Escreve os dados da mídia no arquivo utilizando o fluxo de escrita
+        fileStream.write(mediaData, 'base64');
+    
+        // Finaliza o fluxo de escrita
         fileStream.end();
-    }
-    
-    
+      }
 
 
       else if (parsedMessage.action === 'iniciarCampanha') {

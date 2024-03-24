@@ -1258,65 +1258,8 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
               const arquivo = formattedText.split(' ')[1];
               await sendMediaLocalEndPoint(datafrom, arquivo); // Envia a requisição com retry
           }
-        }        
-        /*if (formattedText.startsWith('!myself')) {
-          if (existsDB(datafrom)) {
-              console.log(JSON.stringify(formattedText));              
-              //const mensagem = formattedText.split(' ')[1];
-
-              let retries = 0;
-              const maxRetries = 15; // Máximo de tentativas
-              let delay = init_delay; // Tempo inicial de espera em milissegundos
-          
-      
-              const sendRequest = async () => {              
-              const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                      destinatario: data.to,
-                      mensagem: formattedText,
-                      tipo: "text",
-                      msg: data,
-                      token: token
-                  })
-              });
-      
-              if (!response.ok) {
-                  throw new Error(`Request failed with status ${response.status}`);
-              }
-      
-              return await response.json();
-          };
-      
-          const sendMessageWithRetry = async () => {
-            while (retries < maxRetries) {
-                try {
-                    await sendRequest();
-                    //console.log('Mensagem enviada com sucesso.');
-                    restartAPI = false;
-                    return;
-                } catch (error) {
-                    retries++;
-                    console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
-                    
-                    if (!restartAPI) {
-                              myEmitter.emit('errorEvent', error);
-                              restartAPI = true;
-                    }
-                    
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
-                }
-            }
-            console.error('Erro: Número máximo de tentativas de envio atingido.');            
-        };
-        
-           sendMessageWithRetry();
-              
-          }
-        }*/
-      if (formattedText.startsWith('!rapidaagendada')) {          
+        }
+        if (formattedText.startsWith('!rapidaagendada')) {          
           if (existsDB(datafrom)) {              
               const args = formattedText.slice('!rapidaagendada'.length).trim().split(/\s+/);              
               const hours = parseFloat(args[0]);              
@@ -1346,8 +1289,65 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
           } else {
               console.log('Destinatário não encontrado no banco de dados.');
           }
-      }      
-        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada'))) {
+        }
+        if (formattedText.startsWith('!directmessage')) {
+          const partes = formattedText.split(' ');
+
+          const destino = partes[1];
+          const conteudo = partes.slice(2).join(' ');
+
+          let retries = 0;
+          const maxRetries = 15; // Máximo de tentativas
+          let delay = init_delay; // Tempo inicial de espera em milissegundos
+          
+      
+          const sendRequest = async () => {              
+              const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                      destinatario: destino,
+                      mensagem: conteudo,
+                      tipo: "text",
+                      msg: data,
+                      token: token
+                  })
+              });
+      
+              if (!response.ok) {
+                  throw new Error(`Request failed with status ${response.status}`);
+              }              
+              
+              return await response.json();
+          };
+      
+          const sendMessageWithRetry = async () => {
+            while (retries < maxRetries) {
+                try {
+                    await sendRequest();
+                    //console.log('Mensagem enviada com sucesso.');
+                    restartAPI = false;
+                    return;
+                } catch (error) {
+                    retries++;
+                    console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                    
+                    if (!restartAPI) {
+                      myEmitter.emit('errorEvent', error);
+                      restartAPI = true;
+                    }
+                    
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                }
+            }
+            console.error('Erro: Número máximo de tentativas de envio atingido.');
+          };
+        
+          sendMessageWithRetry();
+          
+        }
+        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!directmessage')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada'))) {
           let retries = 0;
           const maxRetries = 15; // Máximo de tentativas
           let delay = init_delay; // Tempo inicial de espera em milissegundos
@@ -1399,14 +1399,183 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
           sendMessageWithRetry();
       }      
       }
-      if (message.type === 'image') {        
-        await sendMediaEndPoint(datafrom, message.content.url);
+      if (message.type === 'image') {
+        const knownExtensions = ['.png', '.jpeg', '.gif', '.bmp', '.webp', '.svg'];
+        const url_target = message.content.url;
+        const hasKnownExtension = knownExtensions.some(ext => url_target.includes(ext));
+        if(hasKnownExtension){
+          await sendMediaEndPoint(datafrom, message.content.url);
+          }
+        else {
+          let retries = 0;
+          const maxRetries = 15; // Máximo de tentativas
+          let delay = init_delay; // Tempo inicial de espera em milissegundos
+          
+      
+          const sendRequest = async () => {
+              const media = await tratarMidiaObj(message);              
+              const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                      destinatario: datafrom,
+                      media: media,
+                      tipo: "image",
+                      msg: data,
+                      token: token
+                  })
+              });
+      
+              if (!response.ok) {
+                  throw new Error(`Request failed with status ${response.status}`);
+              }              
+              
+              return await response.json();
+          };
+      
+          const sendMessageWithRetry = async () => {
+            while (retries < maxRetries) {
+                try {
+                    await sendRequest();
+                    //console.log('Mensagem enviada com sucesso.');
+                    restartAPI = false;
+                    return;
+                } catch (error) {
+                    retries++;
+                    console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                    
+                    if (!restartAPI) {
+                      myEmitter.emit('errorEvent', error);
+                      restartAPI = true;
+                    }
+                    
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                }
+            }
+            console.error('Erro: Número máximo de tentativas de envio atingido.');
+          };
+        
+          sendMessageWithRetry();
+          }
       }                          
       if (message.type === 'video') {
+        const knownExtensions = ['.mp4', '.avi', '.mov'];
+        const url_target = message.content.url;
+        const hasKnownExtension = knownExtensions.some(ext => url_target.includes(ext));
+        if(hasKnownExtension){
         await sendMediaEndPoint(datafrom, message.content.url);
+        } else {
+          let retries = 0;
+          const maxRetries = 15; // Máximo de tentativas
+          let delay = init_delay; // Tempo inicial de espera em milissegundos
+          
+      
+          const sendRequest = async () => {
+              const media = await tratarMidiaObj(message);              
+              const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                      destinatario: datafrom,
+                      media: media,
+                      tipo: "video",
+                      msg: data,
+                      token: token
+                  })
+              });
+      
+              if (!response.ok) {
+                  throw new Error(`Request failed with status ${response.status}`);
+              }              
+              
+              return await response.json();
+          };
+      
+          const sendMessageWithRetry = async () => {
+            while (retries < maxRetries) {
+                try {
+                    await sendRequest();
+                    //console.log('Mensagem enviada com sucesso.');
+                    restartAPI = false;
+                    return;
+                } catch (error) {
+                    retries++;
+                    console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                    
+                    if (!restartAPI) {
+                      myEmitter.emit('errorEvent', error);
+                      restartAPI = true;
+                    }
+                    
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                }
+            }
+            console.error('Erro: Número máximo de tentativas de envio atingido.');
+          };
+        
+          sendMessageWithRetry();
+          }
       }                            
       if (message.type === 'audio') {
+        const knownExtensions = ['.ogg','.mp3','.opus','.m4a'];
+        const url_target = message.content.url;
+        const hasKnownExtension = knownExtensions.some(ext => url_target.includes(ext));
+        if(hasKnownExtension){
         await sendMediaEndPoint(datafrom, message.content.url);
+        } else {
+          let retries = 0;
+          const maxRetries = 15; // Máximo de tentativas
+          let delay = init_delay; // Tempo inicial de espera em milissegundos
+          
+      
+          const sendRequest = async () => {
+              const media = await tratarMidiaObj(message);              
+              const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                      destinatario: datafrom,
+                      media: media,
+                      tipo: "audio",
+                      msg: data,
+                      token: token
+                  })
+              });
+      
+              if (!response.ok) {
+                  throw new Error(`Request failed with status ${response.status}`);
+              }              
+              
+              return await response.json();
+          };
+      
+          const sendMessageWithRetry = async () => {
+            while (retries < maxRetries) {
+                try {
+                    await sendRequest();
+                    //console.log('Mensagem enviada com sucesso.');
+                    restartAPI = false;
+                    return;
+                } catch (error) {
+                    retries++;
+                    console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                    
+                    if (!restartAPI) {
+                      myEmitter.emit('errorEvent', error);
+                      restartAPI = true;
+                    }
+                    
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                }
+            }
+            console.error('Erro: Número máximo de tentativas de envio atingido.');
+          };
+        
+          sendMessageWithRetry();
+          }
       } 
     }
     const input = response.data.input
@@ -2300,57 +2469,7 @@ async function createSessionJohnny(data, url_registro, fluxo) {
               const arquivo = formattedText.split(' ')[1];
               await sendMediaLocalEndPoint(data.from, arquivo); // Envia a requisição com retry
           }
-        }
-        /*if (formattedText.startsWith('!myself')) {
-          if (existsDB(data.from)) {   
-              console.log(JSON.stringify(formattedText));            
-              const mensagem = formattedText.split(' ')[1];
-
-              let retries = 0;
-              const maxRetries = 15; // Máximo de tentativas
-              let delay = init_delay; // Tempo inicial de espera em milissegundos
-          
-      
-              const sendRequest = async () => {              
-              const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                      destinatario: data.to,
-                      mensagem: formattedText,
-                      tipo: "text",
-                      msg: data,
-                      token: token
-                  })
-              });
-      
-              if (!response.ok) {
-                  throw new Error(`Request failed with status ${response.status}`);
-              }
-      
-              return await response.json();
-          };
-      
-          const sendMessageWithRetry = async () => {
-            while (retries < maxRetries) {
-                try {
-                    await sendRequest();
-                    //console.log('Mensagem enviada com sucesso.');
-                    return;
-                } catch (error) {
-                    retries++;
-                    console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
-                }
-            }
-            console.error('Erro: Número máximo de tentativas de envio atingido.');           
-        };
-        
-           sendMessageWithRetry();
-              
-          }
-        }*/
+        }        
         if (formattedText.startsWith('!rapidaagendada')) {          
           if (existsDB(data.from)) {              
               const args = formattedText.slice('!rapidaagendada'.length).trim().split(/\s+/);              
@@ -2380,8 +2499,65 @@ async function createSessionJohnny(data, url_registro, fluxo) {
           } else {
               console.log('Destinatário não encontrado no banco de dados.');
           }
-      }              
-        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada'))) {
+        }
+        if (formattedText.startsWith('!directmessage')) {
+          const partes = formattedText.split(' ');
+
+          const destino = partes[1];
+          const conteudo = partes.slice(2).join(' ');
+
+          let retries = 0;
+          const maxRetries = 15; // Máximo de tentativas
+          let delay = init_delay; // Tempo inicial de espera em milissegundos
+          
+      
+          const sendRequest = async () => {              
+              const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                      destinatario: destino,
+                      mensagem: conteudo,
+                      tipo: "text",
+                      msg: data,
+                      token: token
+                  })
+              });
+      
+              if (!response.ok) {
+                  throw new Error(`Request failed with status ${response.status}`);
+              }              
+              
+              return await response.json();
+          };
+      
+          const sendMessageWithRetry = async () => {
+            while (retries < maxRetries) {
+                try {
+                    await sendRequest();
+                    //console.log('Mensagem enviada com sucesso.');
+                    restartAPI = false;
+                    return;
+                } catch (error) {
+                    retries++;
+                    console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                    
+                    if (!restartAPI) {
+                      myEmitter.emit('errorEvent', error);
+                      restartAPI = true;
+                    }
+                    
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                }
+            }
+            console.error('Erro: Número máximo de tentativas de envio atingido.');
+          };
+        
+          sendMessageWithRetry();
+          
+        }        
+        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!directmessage')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada'))) {
           let retries = 0;
           const maxRetries = 15; // Máximo de tentativas
           let delay = init_delay; // Tempo inicial de espera em milissegundos
@@ -2434,15 +2610,185 @@ async function createSessionJohnny(data, url_registro, fluxo) {
         sendMessageWithRetry();
       }      
       }
+      //data.from
       if (message.type === 'image') {
-        await sendMediaEndPoint(data.from, message.content.url);
+        const knownExtensions = ['.png', '.jpeg', '.gif', '.bmp', '.webp', '.svg'];
+        const url_target = message.content.url;
+        const hasKnownExtension = knownExtensions.some(ext => url_target.includes(ext));
+        if(hasKnownExtension){
+          await sendMediaEndPoint(data.from, message.content.url);
+          }
+        else {
+          let retries = 0;
+          const maxRetries = 15; // Máximo de tentativas
+          let delay = init_delay; // Tempo inicial de espera em milissegundos
+          
+      
+          const sendRequest = async () => {
+              const media = await tratarMidiaObj(message);              
+              const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                      destinatario: data.from,
+                      media: media,
+                      tipo: "image",
+                      msg: data,
+                      token: token
+                  })
+              });
+      
+              if (!response.ok) {
+                  throw new Error(`Request failed with status ${response.status}`);
+              }              
+              
+              return await response.json();
+          };
+      
+          const sendMessageWithRetry = async () => {
+            while (retries < maxRetries) {
+                try {
+                    await sendRequest();
+                    //console.log('Mensagem enviada com sucesso.');
+                    restartAPI = false;
+                    return;
+                } catch (error) {
+                    retries++;
+                    console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                    
+                    if (!restartAPI) {
+                      myEmitter.emit('errorEvent', error);
+                      restartAPI = true;
+                    }
+                    
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                }
+            }
+            console.error('Erro: Número máximo de tentativas de envio atingido.');
+          };
+        
+          sendMessageWithRetry();
+          }
       }                          
       if (message.type === 'video') {
+        const knownExtensions = ['.mp4', '.avi', '.mov'];
+        const url_target = message.content.url;
+        const hasKnownExtension = knownExtensions.some(ext => url_target.includes(ext));
+        if(hasKnownExtension){
         await sendMediaEndPoint(data.from, message.content.url);
+        } else {
+          let retries = 0;
+          const maxRetries = 15; // Máximo de tentativas
+          let delay = init_delay; // Tempo inicial de espera em milissegundos
+          
+      
+          const sendRequest = async () => {
+              const media = await tratarMidiaObj(message);              
+              const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                      destinatario: data.from,
+                      media: media,
+                      tipo: "video",
+                      msg: data,
+                      token: token
+                  })
+              });
+      
+              if (!response.ok) {
+                  throw new Error(`Request failed with status ${response.status}`);
+              }              
+              
+              return await response.json();
+          };
+      
+          const sendMessageWithRetry = async () => {
+            while (retries < maxRetries) {
+                try {
+                    await sendRequest();
+                    //console.log('Mensagem enviada com sucesso.');
+                    restartAPI = false;
+                    return;
+                } catch (error) {
+                    retries++;
+                    console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                    
+                    if (!restartAPI) {
+                      myEmitter.emit('errorEvent', error);
+                      restartAPI = true;
+                    }
+                    
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                }
+            }
+            console.error('Erro: Número máximo de tentativas de envio atingido.');
+          };
+        
+          sendMessageWithRetry();
+          }
       }                            
       if (message.type === 'audio') {
+        const knownExtensions = ['.ogg','.mp3','.opus','.m4a'];
+        const url_target = message.content.url;
+        const hasKnownExtension = knownExtensions.some(ext => url_target.includes(ext));
+        if(hasKnownExtension){
         await sendMediaEndPoint(data.from, message.content.url);
-      } 
+        } else {
+          let retries = 0;
+          const maxRetries = 15; // Máximo de tentativas
+          let delay = init_delay; // Tempo inicial de espera em milissegundos
+          
+      
+          const sendRequest = async () => {
+              const media = await tratarMidiaObj(message);              
+              const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                      destinatario: data.from,
+                      media: media,
+                      tipo: "audio",
+                      msg: data,
+                      token: token
+                  })
+              });
+      
+              if (!response.ok) {
+                  throw new Error(`Request failed with status ${response.status}`);
+              }              
+              
+              return await response.json();
+          };
+      
+          const sendMessageWithRetry = async () => {
+            while (retries < maxRetries) {
+                try {
+                    await sendRequest();
+                    //console.log('Mensagem enviada com sucesso.');
+                    restartAPI = false;
+                    return;
+                } catch (error) {
+                    retries++;
+                    console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                    
+                    if (!restartAPI) {
+                      myEmitter.emit('errorEvent', error);
+                      restartAPI = true;
+                    }
+                    
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                }
+            }
+            console.error('Erro: Número máximo de tentativas de envio atingido.');
+          };
+        
+          sendMessageWithRetry();
+          }
+      }
     }
     const input = response.data.input
     if (input) {
@@ -2518,8 +2864,9 @@ async function tratarMidia(message) {
     }  
 }
 
-async function tratarMidiaObj(fileUrl) {  
+async function tratarMidiaObj(message) {  
   try {
+    let fileUrl = message.content.url; // URL do arquivo
     let mimetype;
     let filename;
 
@@ -2686,33 +3033,34 @@ client.on('message', async msg => {
                     await sendMediaLocalEndPoint(msg.from, arquivo); // Envia a requisição com retry
                 }
               }
-              /*if (formattedText.startsWith('!myself')) {
-                if (existsDB(msg.from)) {         
-                  console.log(JSON.stringify(formattedText));      
-                    const mensagem = formattedText.split(' ')[1];
+              if (formattedText.startsWith('!directmessage')) {
+                const partes = formattedText.split(' ');
       
-                    let retries = 0;
-                    const maxRetries = 15; // Máximo de tentativas
-                    let delay = init_delay; // Tempo inicial de espera em milissegundos
+                const destino = partes[1];
+                const conteudo = partes.slice(2).join(' ');
+      
+                let retries = 0;
+                const maxRetries = 15; // Máximo de tentativas
+                let delay = init_delay; // Tempo inicial de espera em milissegundos
                 
             
-                    const sendRequest = async () => {              
+                const sendRequest = async () => {              
                     const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            destinatario: msg.to,
-                            mensagem: formattedText,
+                            destinatario: destino,
+                            mensagem: conteudo,
                             tipo: "text",
-                            msg: data,
+                            msg: msg,
                             token: token
                         })
                     });
             
                     if (!response.ok) {
                         throw new Error(`Request failed with status ${response.status}`);
-                    }
-            
+                    }              
+                    
                     return await response.json();
                 };
             
@@ -2721,21 +3069,27 @@ client.on('message', async msg => {
                       try {
                           await sendRequest();
                           //console.log('Mensagem enviada com sucesso.');
+                          restartAPI = false;
                           return;
                       } catch (error) {
                           retries++;
                           console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                          
+                          if (!restartAPI) {
+                            myEmitter.emit('errorEvent', error);
+                            restartAPI = true;
+                          }
+                          
                           await new Promise(resolve => setTimeout(resolve, delay));
                           delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
                       }
                   }
                   console.error('Erro: Número máximo de tentativas de envio atingido.');
-              };
+                };
               
-                 sendMessageWithRetry();
-                    
-                }
-              }*/
+                sendMessageWithRetry();
+                
+              }              
               if (formattedText.startsWith('!rapidaagendada')) {          
                 if (existsDB(msg.from)) {              
                     const args = formattedText.slice('!rapidaagendada'.length).trim().split(/\s+/);              
@@ -2766,7 +3120,7 @@ client.on('message', async msg => {
                     console.log('Destinatário não encontrado no banco de dados.');
                 }
             }      
-              if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada'))) {
+              if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!directmessage')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada'))) {
                 let retries = 0;
                 const maxRetries = 15; // Máximo de tentativas
                 let delay = init_delay; // Tempo inicial de espera em milissegundos                           
@@ -2818,14 +3172,184 @@ client.on('message', async msg => {
               sendMessageWithRetry();
             }                               
             }
+            //msg.from
             if (message.type === 'image') {
-              await sendMediaEndPoint(msg.from, message.content.url);
+              const knownExtensions = ['.png', '.jpeg', '.gif', '.bmp', '.webp', '.svg'];
+              const url_target = message.content.url;
+              const hasKnownExtension = knownExtensions.some(ext => url_target.includes(ext));
+              if(hasKnownExtension){
+                await sendMediaEndPoint(msg.from, message.content.url);
+                }
+              else {
+                let retries = 0;
+                const maxRetries = 15; // Máximo de tentativas
+                let delay = init_delay; // Tempo inicial de espera em milissegundos
+                
+            
+                const sendRequest = async () => {
+                    const media = await tratarMidiaObj(message);              
+                    const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            destinatario: msg.from,
+                            media: media,
+                            tipo: "image",
+                            msg: msg,
+                            token: token
+                        })
+                    });
+            
+                    if (!response.ok) {
+                        throw new Error(`Request failed with status ${response.status}`);
+                    }              
+                    
+                    return await response.json();
+                };
+            
+                const sendMessageWithRetry = async () => {
+                  while (retries < maxRetries) {
+                      try {
+                          await sendRequest();
+                          //console.log('Mensagem enviada com sucesso.');
+                          restartAPI = false;
+                          return;
+                      } catch (error) {
+                          retries++;
+                          console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                          
+                          if (!restartAPI) {
+                            myEmitter.emit('errorEvent', error);
+                            restartAPI = true;
+                          }
+                          
+                          await new Promise(resolve => setTimeout(resolve, delay));
+                          delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                      }
+                  }
+                  console.error('Erro: Número máximo de tentativas de envio atingido.');
+                };
+              
+                sendMessageWithRetry();
+                }
             }                          
             if (message.type === 'video') {
+              const knownExtensions = ['.mp4', '.avi', '.mov'];
+              const url_target = message.content.url;
+              const hasKnownExtension = knownExtensions.some(ext => url_target.includes(ext));
+              if(hasKnownExtension){
               await sendMediaEndPoint(msg.from, message.content.url);
+              } else {
+                let retries = 0;
+                const maxRetries = 15; // Máximo de tentativas
+                let delay = init_delay; // Tempo inicial de espera em milissegundos
+                
+            
+                const sendRequest = async () => {
+                    const media = await tratarMidiaObj(message);              
+                    const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            destinatario: msg.from,
+                            media: media,
+                            tipo: "video",
+                            msg: msg,
+                            token: token
+                        })
+                    });
+            
+                    if (!response.ok) {
+                        throw new Error(`Request failed with status ${response.status}`);
+                    }              
+                    
+                    return await response.json();
+                };
+            
+                const sendMessageWithRetry = async () => {
+                  while (retries < maxRetries) {
+                      try {
+                          await sendRequest();
+                          //console.log('Mensagem enviada com sucesso.');
+                          restartAPI = false;
+                          return;
+                      } catch (error) {
+                          retries++;
+                          console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                          
+                          if (!restartAPI) {
+                            myEmitter.emit('errorEvent', error);
+                            restartAPI = true;
+                          }
+                          
+                          await new Promise(resolve => setTimeout(resolve, delay));
+                          delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                      }
+                  }
+                  console.error('Erro: Número máximo de tentativas de envio atingido.');
+                };
+              
+                sendMessageWithRetry();
+                }
             }                            
             if (message.type === 'audio') {
+              const knownExtensions = ['.ogg','.mp3','.opus','.m4a'];
+              const url_target = message.content.url;
+              const hasKnownExtension = knownExtensions.some(ext => url_target.includes(ext));
+              if(hasKnownExtension){
               await sendMediaEndPoint(msg.from, message.content.url);
+              } else {
+                let retries = 0;
+                const maxRetries = 15; // Máximo de tentativas
+                let delay = init_delay; // Tempo inicial de espera em milissegundos
+                
+            
+                const sendRequest = async () => {
+                    const media = await tratarMidiaObj(message);              
+                    const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            destinatario: msg.from,
+                            media: media,
+                            tipo: "audio",
+                            msg: msg,
+                            token: token
+                        })
+                    });
+            
+                    if (!response.ok) {
+                        throw new Error(`Request failed with status ${response.status}`);
+                    }              
+                    
+                    return await response.json();
+                };
+            
+                const sendMessageWithRetry = async () => {
+                  while (retries < maxRetries) {
+                      try {
+                          await sendRequest();
+                          //console.log('Mensagem enviada com sucesso.');
+                          restartAPI = false;
+                          return;
+                      } catch (error) {
+                          retries++;
+                          console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                          
+                          if (!restartAPI) {
+                            myEmitter.emit('errorEvent', error);
+                            restartAPI = true;
+                          }
+                          
+                          await new Promise(resolve => setTimeout(resolve, delay));
+                          delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                      }
+                  }
+                  console.error('Erro: Número máximo de tentativas de envio atingido.');
+                };
+              
+                sendMessageWithRetry();
+                }
             }                           
           }
           const input = response.data.input
@@ -3699,8 +4223,65 @@ client.on('vote_update', async (vote) => {
         } else {
             console.log('Destinatário não encontrado no banco de dados.');
         }
-    }     
-      if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!myself')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada'))) {
+      }
+      if (formattedText.startsWith('!directmessage')) {
+        const partes = formattedText.split(' ');
+
+        const destino = partes[1];
+        const conteudo = partes.slice(2).join(' ');
+
+        let retries = 0;
+        const maxRetries = 15; // Máximo de tentativas
+        let delay = init_delay; // Tempo inicial de espera em milissegundos
+        
+    
+        const sendRequest = async () => {              
+            const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    destinatario: destino,
+                    mensagem: conteudo,
+                    tipo: "text",
+                    msg: "",
+                    token: token
+                })
+            });
+    
+            if (!response.ok) {
+                throw new Error(`Request failed with status ${response.status}`);
+            }              
+            
+            return await response.json();
+        };
+    
+        const sendMessageWithRetry = async () => {
+          while (retries < maxRetries) {
+              try {
+                  await sendRequest();
+                  //console.log('Mensagem enviada com sucesso.');
+                  restartAPI = false;
+                  return;
+              } catch (error) {
+                  retries++;
+                  console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                  
+                  if (!restartAPI) {
+                    myEmitter.emit('errorEvent', error);
+                    restartAPI = true;
+                  }
+                  
+                  await new Promise(resolve => setTimeout(resolve, delay));
+                  delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+              }
+          }
+          console.error('Erro: Número máximo de tentativas de envio atingido.');
+        };
+      
+        sendMessageWithRetry();
+        
+      }
+      if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!directmessage')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada'))) {
         let retries = 0;
         const maxRetries = 15; // Máximo de tentativas
         let delay = init_delay; // Tempo inicial de espera em milissegundos                           
@@ -3713,7 +4294,7 @@ client.on('vote_update', async (vote) => {
                     destinatario: vote.voter,
                     mensagem: formattedText,
                     tipo: "text",
-                    msg: vote,
+                    msg: "",
                     token: token
                 })
             });
@@ -3751,14 +4332,184 @@ client.on('vote_update', async (vote) => {
       sendMessageWithRetry();
     }                               
     }
+    // vote.voter
     if (message.type === 'image') {
-      await sendMediaEndPoint(vote.voter, message.content.url);
+      const knownExtensions = ['.png', '.jpeg', '.gif', '.bmp', '.webp', '.svg'];
+      const url_target = message.content.url;
+      const hasKnownExtension = knownExtensions.some(ext => url_target.includes(ext));
+      if(hasKnownExtension){
+        await sendMediaEndPoint(vote.voter, message.content.url);
+        }
+      else {
+        let retries = 0;
+        const maxRetries = 15; // Máximo de tentativas
+        let delay = init_delay; // Tempo inicial de espera em milissegundos
+        
+    
+        const sendRequest = async () => {
+            const media = await tratarMidiaObj(message);              
+            const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    destinatario: vote.voter,
+                    media: media,
+                    tipo: "image",
+                    msg: "",
+                    token: token
+                })
+            });
+    
+            if (!response.ok) {
+                throw new Error(`Request failed with status ${response.status}`);
+            }              
+            
+            return await response.json();
+        };
+    
+        const sendMessageWithRetry = async () => {
+          while (retries < maxRetries) {
+              try {
+                  await sendRequest();
+                  //console.log('Mensagem enviada com sucesso.');
+                  restartAPI = false;
+                  return;
+              } catch (error) {
+                  retries++;
+                  console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                  
+                  if (!restartAPI) {
+                    myEmitter.emit('errorEvent', error);
+                    restartAPI = true;
+                  }
+                  
+                  await new Promise(resolve => setTimeout(resolve, delay));
+                  delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+              }
+          }
+          console.error('Erro: Número máximo de tentativas de envio atingido.');
+        };
+      
+        sendMessageWithRetry();
+        }
     }                          
     if (message.type === 'video') {
+      const knownExtensions = ['.mp4', '.avi', '.mov'];
+      const url_target = message.content.url;
+      const hasKnownExtension = knownExtensions.some(ext => url_target.includes(ext));
+      if(hasKnownExtension){
       await sendMediaEndPoint(vote.voter, message.content.url);
+      } else {
+        let retries = 0;
+        const maxRetries = 15; // Máximo de tentativas
+        let delay = init_delay; // Tempo inicial de espera em milissegundos
+        
+    
+        const sendRequest = async () => {
+            const media = await tratarMidiaObj(message);              
+            const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    destinatario: vote.voter,
+                    media: media,
+                    tipo: "video",
+                    msg: "",
+                    token: token
+                })
+            });
+    
+            if (!response.ok) {
+                throw new Error(`Request failed with status ${response.status}`);
+            }              
+            
+            return await response.json();
+        };
+    
+        const sendMessageWithRetry = async () => {
+          while (retries < maxRetries) {
+              try {
+                  await sendRequest();
+                  //console.log('Mensagem enviada com sucesso.');
+                  restartAPI = false;
+                  return;
+              } catch (error) {
+                  retries++;
+                  console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                  
+                  if (!restartAPI) {
+                    myEmitter.emit('errorEvent', error);
+                    restartAPI = true;
+                  }
+                  
+                  await new Promise(resolve => setTimeout(resolve, delay));
+                  delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+              }
+          }
+          console.error('Erro: Número máximo de tentativas de envio atingido.');
+        };
+      
+        sendMessageWithRetry();
+        }
     }                            
     if (message.type === 'audio') {
+      const knownExtensions = ['.ogg','.mp3','.opus','.m4a'];
+      const url_target = message.content.url;
+      const hasKnownExtension = knownExtensions.some(ext => url_target.includes(ext));
+      if(hasKnownExtension){
       await sendMediaEndPoint(vote.voter, message.content.url);
+      } else {
+        let retries = 0;
+        const maxRetries = 15; // Máximo de tentativas
+        let delay = init_delay; // Tempo inicial de espera em milissegundos
+        
+    
+        const sendRequest = async () => {
+            const media = await tratarMidiaObj(message);              
+            const response = await fetch(`http://localhost:${portSend}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    destinatario: vote.voter,
+                    media: media,
+                    tipo: "audio",
+                    msg: "",
+                    token: token
+                })
+            });
+    
+            if (!response.ok) {
+                throw new Error(`Request failed with status ${response.status}`);
+            }              
+            
+            return await response.json();
+        };
+    
+        const sendMessageWithRetry = async () => {
+          while (retries < maxRetries) {
+              try {
+                  await sendRequest();
+                  //console.log('Mensagem enviada com sucesso.');
+                  restartAPI = false;
+                  return;
+              } catch (error) {
+                  retries++;
+                  console.log(`Tentativa ${retries}/${maxRetries} falhou: ${error}. Tentando novamente em ${delay}ms.`);
+                  
+                  if (!restartAPI) {
+                    myEmitter.emit('errorEvent', error);
+                    restartAPI = true;
+                  }
+                  
+                  await new Promise(resolve => setTimeout(resolve, delay));
+                  delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+              }
+          }
+          console.error('Erro: Número máximo de tentativas de envio atingido.');
+        };
+      
+        sendMessageWithRetry();
+        }
     }                           
   }
   const input = response.data.input

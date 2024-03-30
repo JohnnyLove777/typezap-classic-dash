@@ -24,7 +24,6 @@ const port = 8888;
 
 app.use(cors());
 app.use(express.static('public'));
-app.use(express.static('media'));
 //app.use(bodyParser.json());
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
@@ -124,50 +123,54 @@ initializeWebhookDB();
     }
 });*/
   
-  
-  //Kit com os comandos otimizados para nuvem Ubuntu Linux (créditos Pedrinho da Nasa Comunidade ZDG)
-  const client = new Client({
-    authStrategy: new LocalAuth({ clientId: sessao }),
-    puppeteer: {
-      headless: true,
-      //CAMINHO DO CHROME PARA WINDOWS (REMOVER O COMENTÁRIO ABAIXO)
-      //executablePath: 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
-      //===================================================================================
-      // CAMINHO DO CHROME PARA MAC (REMOVER O COMENTÁRIO ABAIXO)
-      //executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-      //===================================================================================
-      // CAMINHO DO CHROME PARA LINUX (REMOVER O COMENTÁRIO ABAIXO)
-       executablePath: '/usr/bin/google-chrome-stable',
-      //===================================================================================
-      args: [
-        '--no-sandbox', //Necessário para sistemas Linux
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--single-process', // <- Este não funciona no Windows, apague caso suba numa máquina Windows
-        '--disable-gpu'
-      ]
-    }
-  });
+const wwebVersion = '2.2407.3';
+//Kit com os comandos otimizados para nuvem Ubuntu Linux (créditos Pedrinho da Nasa Comunidade ZDG)
+const client = new Client({
+  authStrategy: new LocalAuth({ clientId: sessao }),
+  puppeteer: {
+    headless: true,
+    //CAMINHO DO CHROME PARA WINDOWS (REMOVER O COMENTÁRIO ABAIXO)
+    //executablePath: 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
+    //===================================================================================
+    // CAMINHO DO CHROME PARA MAC (REMOVER O COMENTÁRIO ABAIXO)
+    //executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    //===================================================================================
+    // CAMINHO DO CHROME PARA LINUX (REMOVER O COMENTÁRIO ABAIXO)
+     executablePath: '/usr/bin/google-chrome-stable',
+    //===================================================================================
+    args: [
+      '--no-sandbox', //Necessário para sistemas Linux
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
+      '--no-first-run',
+      '--no-zygote',
+      '--single-process', // <- Este não funciona no Windows, apague caso suba numa máquina Windows
+      '--disable-gpu'
+    ]
+  },
+  webVersionCache: {
+      type: 'remote',
+      remotePath: `https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/${wwebVersion}.html`,
+  }
+});
 
   async function sendMessageWithRetry(phoneNumber, messageToSend) {
-    //try {
+    try {
         await client.sendMessage(phoneNumber, messageToSend);      
-    //} catch (error) {
-    //    console.error(`Falha ao enviar mensagem para ${phoneNumber}: erro: ${error}`);        
-    //}
+    } catch (error) {
+        console.error(`Falha ao enviar mensagem para ${phoneNumber}: erro: ${error}`);        
+    }
   }
 
   async function sendAudioWithRetry(phoneNumber, messageToSend) {
-    //try {
+    try {
         //const audiob01 = MessageMedia.fromFilePath('./b01.opus'); // Arquivo de audio em ogg gravado
         //await client.sendMessage(msg.from, audiob01, {sendAudioAsVoice: true}); // enviando o audio16 
         await client.sendMessage(phoneNumber, messageToSend, {sendAudioAsVoice: true});      
-    //} catch (error) {
-    //    console.error(`Falha ao enviar audio para ${phoneNumber}: erro: ${error}`);        
-    //}
+    } catch (error) {
+        console.error(`Falha ao enviar audio para ${phoneNumber}: erro: ${error}`);        
+    }
   }
 
   async function extrairGrupo(grupoId) {
@@ -184,7 +187,7 @@ initializeWebhookDB();
   }
 
   async function sendMessageWithMention(phoneNumber, originalMessage, chat) {
-    //try {        
+    try {        
         let messageToSend = originalMessage.replace('!citartodos', '').trim();        
         if (phoneNumber.endsWith('@g.us')) {           
           const contatos = [];  
@@ -202,9 +205,9 @@ initializeWebhookDB();
                 mentions: [phoneNumber]
             });
         }
-    //} catch (error) {
-    //    console.error(`Falha ao enviar mensagem para ${phoneNumber}: erro: ${error}`);        
-    //}
+    } catch (error) {
+        console.error(`Falha ao enviar mensagem para ${phoneNumber}: erro: ${error}`);        
+    }
 }
 
 
@@ -338,7 +341,7 @@ app.post('/sendMessage', async (req, res) => {
                 if (!media) {
                     return res.status(400).json({ status: 'falha', mensagem: 'É preciso fornecer uma midia' });
                 }
-                await sendMessageWithRetry(chatId, new MessageMedia(media.mimetype, media.data, media.filename), {sendAudioAsVoice: true});
+                await sendAudioWithRetry(chatId, new MessageMedia(media.mimetype, media.data, media.filename));
                 break;
             case 'file':
                 if (!media) {
@@ -445,55 +448,6 @@ app.post('/media', async (req, res) => {
     } else {
       await sendMessageWithRetry(destinatario, media);
     }
-
-      res.json({ status: 'sucesso', mensagem: 'Mídia enviada com sucesso' });
-  } catch (error) {
-      console.error(error);
-      res.status(500).json({ status: 'falha', mensagem: 'Erro ao enviar mídia' });
-  }
-});
-
-app.post('/medialocal', async (req, res) => {
-  const { destinatario, token, nomeArquivo } = req.body;
-
-  // Conferir o token
-  if (token !== SECURITY_TOKEN) {
-      return res.status(401).json({ status: 'falha', mensagem: 'Token inválido' });
-  }
-
-  try {
-      // Construir o caminho do arquivo
-      const filePath = path.resolve(__dirname, 'media', nomeArquivo);
-
-      // Verifica se o arquivo existe
-      if (!fs.existsSync(filePath)) {
-          return res.status(404).json({ status: 'falha', mensagem: 'Arquivo não encontrado' });
-      }
-
-      // Carregar o arquivo da pasta
-      const media = MessageMedia.fromFilePath(filePath);
-      const extension = path.extname(filePath).toLowerCase();
-      const audioExtensions = ['.mp3', '.wav', '.ogg', '.opus'];
-
-      if (audioExtensions.includes(extension) && destinatario.endsWith('@c.us')) {
-          // Se a mídia é áudio, então envie como áudio
-          const destinatarioId = await client.getNumberId(destinatario);
-    
-          if (destinatarioId) {
-              // Obtém o chat pelo ID do destinatário.
-              const chat = await client.getChatById(destinatarioId._serialized);
-      
-              // Simula gravação de áudio no chat.
-              await chat.sendStateRecording();    
-              
-              await sendAudioWithRetry(destinatario, media);            
-          } else {
-              console.log('Número não está registrado no WhatsApp.');
-          }
-      } else {
-          // Caso contrário, envie como mensagem normal
-          await sendMessageWithRetry(destinatario, media);
-      }
 
       res.json({ status: 'sucesso', mensagem: 'Mídia enviada com sucesso' });
   } catch (error) {

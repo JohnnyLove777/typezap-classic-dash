@@ -1,17 +1,24 @@
 const fs = require('fs'); // Para operações síncronas
+const fsp = fs.promises; // Para operações assíncronas baseadas em promessas
 const axios = require('axios');
+const Jimp = require('jimp');
 const fetch = require('node-fetch');
 const express = require('express');
 const WebSocket = require('ws');
 const socketIo = require('socket.io');
 const QRCode = require('qrcode');
 const http = require('http');
+const https = require('https');
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 //const qrcode = require('qrcode-terminal');
 const path = require('path');
 const { Client, Buttons, List, MessageMedia, LocalAuth, Poll } = require('whatsapp-web.js');
+const OpenAI = require('openai');
+const { spawn } = require('child_process');
+const { promisify } = require('util');
+const writeFileAsync = promisify(fs.writeFile);
 
 const DATABASE_FILE = "typesessaodb.json";
 const token = "a9387747d4069f22fca5903858cdda24";
@@ -27,7 +34,7 @@ const portSend = 8888;
     }
 });*/
 
-
+const wwebVersion = '2.2407.3';
 //Kit com os comandos otimizados para nuvem Ubuntu Linux (créditos Pedrinho da Nasa Comunidade ZDG)
 const client = new Client({
   authStrategy: new LocalAuth({ clientId: sessao }),
@@ -52,6 +59,10 @@ const client = new Client({
       '--single-process', // <- Este não funciona no Windows, apague caso suba numa máquina Windows
       '--disable-gpu'
     ]
+  },
+  webVersionCache: {
+      type: 'remote',
+      remotePath: `https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/${wwebVersion}.html`,
   }
 });
 
@@ -65,7 +76,7 @@ async function sendMessage(phoneNumber, messageToSend) {
 
 const delay = ms => new Promise(res => setTimeout(res, ms));
 
-console.log("Bem-vindo ao JohnnyZap 1.3 - A Integração mais completa Typebot + Whatsapp!");
+console.log("Bem-vindo ao JohnnyZap Inteligênte 1.3 - A Integração mais completa Typebot + Whatsapp + OpenAI e ElevenLabs");
 console.log(`Nome da sessão: ${sessao}`);
 
 // Listener WebSocket do frontend
@@ -206,15 +217,10 @@ wss.on('connection', function connection(ws) {
       
       // Verificar se a ação é de registrar JohnnyZap
       if (parsedMessage.action === 'registerTypeZap') {
-        const { url } = parsedMessage.data;
-        //console.log(`Registrando JohnnyZap com URL: ${url}, Chave da API OpenAI: ${openAIKey}, Chave da ElevenLabs: ${elevenLabsKey}`);
-        
-          //if ((url.startsWith('http://') || url.startsWith('https://')) && openAIKey.startsWith('sk-') && elevenLabsKey.length === 32) {
-          // Se todas as verificações passarem, prossegue com o registro
-          addObjectSystem(url);
+        const { url, openAIKey, elevenLabsKey } = parsedMessage.data;
+          addObjectSystem(url, openAIKey, elevenLabsKey);
+          initializeClient(openAIKey);
           ws.send('JohnnyZap registrado com sucesso! Pow pow tei tei, pra cima deles!!');
-          //}
-             
       }
       else if (parsedMessage.action === 'atualizarLista') {
         //console.log('Apertou botão para atualizar lista');
@@ -604,12 +610,338 @@ function createFolderIfNotExists(folderPath) {
 // Caminhos das pastas
 const leadsPath = path.join(__dirname, 'leadslista');
 const registroPath = path.join(__dirname, 'registrolista');
+const audioBrutoPath = path.join(__dirname, 'audiobruto');
+const audioLiquidoPath = path.join(__dirname, 'audioliquido');
+const audioSintetizadoPath = path.join(__dirname, 'audiosintetizado');
+const imagemPath = path.join(__dirname, 'imagemliquida');
 
 // Criar as pastas
 createFolderIfNotExists(leadsPath);
 createFolderIfNotExists(registroPath);
+createFolderIfNotExists(audioBrutoPath);
+createFolderIfNotExists(audioLiquidoPath);
+createFolderIfNotExists(audioSintetizadoPath);
+createFolderIfNotExists(imagemPath);
 
 //Fim do mecanismo para criar pasta
+
+// Rodando imagem IA
+
+async function runDallE(promptText, imagePath, imageName) {
+  try {
+      const genimage = await openai.images.generate({
+          model: "dall-e-3",
+          prompt: promptText,
+          n: 1,
+          size: "1024x1024",
+      });
+      const imageUrl = genimage.data[0].url;
+      const filePath = path.join(imagePath, `${imageName}.png`);
+      await saveImage(imageUrl, filePath);
+      return filePath; // Retorna o caminho do arquivo da imagem salva
+  } catch (error) {
+      console.error('Erro ao gerar ou salvar a imagem:', error);
+      throw error;
+  }
+}
+
+async function saveImage(imageUrl, filePath) {
+  // Fazer uma requisição HTTP GET para a imagem
+  https.get(imageUrl, (response) => {
+    // Inicializar um stream de escrita no arquivo
+    const fileStream = fs.createWriteStream(filePath);
+
+    // Escrever o conteúdo da imagem no arquivo
+    response.pipe(fileStream);
+
+    // Registrar o evento de finalização da escrita
+    fileStream.on('finish', () => {
+      console.log(`A imagem foi salva em ${filePath}`);
+    });
+  });
+}
+
+//Mecanismo para reconhecimento de audio e imagem
+
+async function runAudio(arquivo) {  
+  const transcript = await openai.audio.transcriptions.create({
+    model: 'whisper-1',
+    file: fs.createReadStream(arquivo),
+  });  
+  return transcript.text;  
+}
+
+async function sintetizarFalaOpenAI(texto, nomeArquivo, voice) {
+  try {
+    const requestData = {
+      model: 'tts-1',
+      input: texto,
+      voice: voice,
+    };
+
+    // Configura os cabeçalhos da solicitação
+    const headers = {
+      Authorization: `Bearer ${await readURL(0).openaikey}`,
+      'Content-Type': 'application/json',
+    };
+
+    // Realiza a solicitação
+    const response = await axios.post('https://api.openai.com/v1/audio/speech', requestData, { headers, responseType: 'stream' });
+
+    const fileStream = response.data;
+    const writeStream = fs.createWriteStream(`audiosintetizado/${nomeArquivo}.ogg`);
+
+    fileStream.pipe(writeStream);
+
+    await new Promise((resolve) => {
+      writeStream.on('finish', () => {
+        console.log(`Arquivo "${nomeArquivo}.ogg" baixado com sucesso.`);
+        resolve();
+      });
+    });
+  } catch (error) {
+    console.error('Erro ao fazer a solicitação:', error);
+  }
+}
+
+// ElevenLabs
+
+// Configurações de voz previamente definidas
+const voice_SETTINGS = {  
+  similarity_boost: 0.75, 
+  stability: 0.5,       
+  style: 0,           
+  use_speaker_boost: true
+};
+
+// Função ajustada para fazer a requisição via fetch
+async function textToSpeech(voiceId, text, voiceSettings, elevenlabsKey) {
+  const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
+  const headers = {
+    'Content-Type': 'application/json',
+    'xi-api-key': elevenlabsKey
+  };
+  const data = {
+    text,
+    model_id: "eleven_multilingual_v2",
+    voice_settings: voiceSettings
+  };
+
+  return fetch(url, {
+    method: 'POST',
+    headers: headers,
+    body: JSON.stringify(data)
+  });
+}
+
+// Função para salvar o arquivo de áudio
+function saveAudioFile(response, outputPath) {
+  return new Promise((resolve, reject) => {
+    const fileStream = fs.createWriteStream(outputPath);
+    response.body.pipe(fileStream);
+    response.body.on('error', (error) => {
+      console.error('Erro ao salvar o arquivo de áudio:', error);
+      reject(error);
+    });
+    fileStream.on('finish', () => {
+      console.log(`Arquivo de áudio salvo: ${outputPath}`);
+      resolve();
+    });
+  });
+}
+
+// Função para tratar erro
+function handleError(err) {
+  console.error('Erro na API:', err);
+}
+
+// Ajuste da função sintetizarFalaEleven
+async function sintetizarFalaEleven(texto, nomeArquivo, voiceId) {
+  try {
+    // Extrai a chave da API ElevenLabs
+    const elevenlabsKey = readURL(0).elevenlabskey;
+
+    // Define o caminho do arquivo de saída no diretório audiosintetizado
+    const outputPath = path.join('audiosintetizado', `${nomeArquivo}.ogg`);
+
+    // Cria o diretório se não existir
+    if (!fs.existsSync('audiosintetizado')) {
+      fs.mkdirSync('audiosintetizado', { recursive: true });
+    }
+
+    // Realiza a solicitação para conversão de texto em fala
+    const response = await textToSpeech(voiceId, texto, voice_SETTINGS, elevenlabsKey);
+    
+    if (!response.ok) {
+      throw new Error(`Falha na API com status: ${response.status}`);
+    }
+
+    // Salva o arquivo de áudio
+    await saveAudioFile(response, outputPath);
+  } catch (error) {
+    handleError(error);
+    throw error; // Opcionalmente, re-lance o erro para tratamento adicional
+  }
+}
+
+// ElevenLabs
+
+async function converterArquivoOGGparaMP3(caminhoArquivoEntrada, nomeArquivoSaida) {
+return new Promise((resolve, reject) => {
+  const ffmpeg = spawn('ffmpeg', ['-y', '-i', caminhoArquivoEntrada, '-loglevel', '0', '-nostats', nomeArquivoSaida]);
+
+  ffmpeg.stderr.on('data', (data) => {
+    console.error(`stderr: ${data}`);
+  });
+
+  ffmpeg.on('close', (code) => {
+    if (code !== 0) {
+      reject(`Erro ao executar o comando, código de saída: ${code}`);
+    } else {
+      resolve(`Arquivo convertido com sucesso para o formato MP3: ${nomeArquivoSaida}`);
+    }
+  });
+});
+}
+
+async function runImage(promptText, base64Image) {
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4-vision-preview',
+    max_tokens: 4096,
+    messages: [
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: promptText },
+          {
+            type: 'image_url',
+            image_url: {
+              url: `data:image/jpeg;base64,${base64Image}`,
+            },
+          },
+        ],
+      },
+    ],
+  });
+
+  return response.choices[0].message.content;
+}
+
+async function getImageContent(filePath) {
+  try {
+      const imageData = fs.readFileSync(filePath);
+      return imageData;
+  } catch (error) {
+      console.error('Erro ao ler a imagem:', error);
+      throw error;
+  }
+}
+
+function encodeImage(imagePath) {
+  const imageBuffer = fs.readFileSync(imagePath);
+  return Buffer.from(imageBuffer).toString('base64');
+}
+
+async function processMessageIA(msg) {
+
+if (msg.hasMedia) {
+  const attachmentData = await msg.downloadMedia();
+  if(readNextAudio(msg.from) === false && attachmentData.mimetype === 'audio/ogg; codecs=opus'){
+    return;
+  }
+  if (readNextAudio(msg.from) === true && attachmentData.mimetype !== 'audio/ogg; codecs=opus' && !attachmentData.mimetype.startsWith('image/')){
+    return "Mídia não detectada.";
+  }
+  if (readNextAudio(msg.from) === true && attachmentData.mimetype === 'audio/ogg; codecs=opus'){
+    const audioFilePath = `./audiobruto/${msg.from.split('@c.us')[0]}.ogg`;
+
+    if (fs.existsSync(audioFilePath)) {
+      fs.unlinkSync(audioFilePath);
+    }
+
+    await writeFileAsync(audioFilePath, Buffer.from(attachmentData.data, 'base64'));
+
+    while (true) {
+      try {
+        if (fs.existsSync(audioFilePath)) {
+          await converterArquivoOGGparaMP3(audioFilePath, `./audioliquido/${msg.from.split('@c.us')[0]}.mp3`);
+          fs.unlinkSync(audioFilePath);
+          return await brokerMaster(runAudio, `./audioliquido/${msg.from.split('@c.us')[0]}.mp3`);
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (err) {
+        console.error(err);
+        break;
+      }
+    }
+  }
+  if (readNextImage(msg.from) === true && attachmentData.mimetype.startsWith('image/')) {
+    const imageFilePath = `./imagemliquida/${msg.from.split('@c.us')[0]}.jpg`;
+
+    // Verifica se o arquivo já existe e, se sim, o remove
+    if (fs.existsSync(imageFilePath)) {
+      fs.unlinkSync(imageFilePath);
+    }
+
+    // Salva a imagem recebida em um arquivo
+    await writeFileAsync(imageFilePath, Buffer.from(attachmentData.data, 'base64'));
+
+    // Loop para garantir que a imagem foi salva antes de prosseguir
+    while (true) {
+      try {
+        if (fs.existsSync(imageFilePath)) {
+          // Codifica a imagem em base64
+          const base64Image = encodeImage(imageFilePath);          
+          // Obtém a resposta do Vision e retorna
+          return `Imagem enviada pelo usuário: ${await runImage(await readPrompt(msg.from), base64Image)}`;
+        }
+
+        // Aguarda um pouco antes de verificar novamente
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (err) {
+        console.error(err);
+        break;
+      }
+    }
+  }  
+  if (readNextImage(msg.from) === false && attachmentData.mimetype.startsWith('image/')){
+    return;
+  }
+  } 
+  if (!msg.hasMedia) {
+  return msg.body;
+  }
+}
+
+function brokerMaster(requestFunction, ...args) {
+  const backoffDelay = 1000;
+  const maxRetries = 10;
+
+  return new Promise((resolve, reject) => {
+    const makeRequest = (retryCount) => {
+      requestFunction(...args)
+        .then((response) => {
+          resolve(response);
+        })
+        .catch((error) => {
+          if (retryCount === maxRetries) {
+            reject(error);
+            return;
+          }
+
+          const delay = backoffDelay * Math.pow(2, retryCount);
+          console.log(`Tentativa ${retryCount + 1} falhou. Tentando novamente em ${delay}ms...`);
+          console.log(error);
+          setTimeout(() => makeRequest(retryCount + 1), delay);
+        });
+    };
+
+    makeRequest(0);
+  });
+}
+
+//Mecanismo para produção de audio
 
 //Rotinas da gestão de dados
 
@@ -631,7 +963,14 @@ function writeJSONFile(nomeArquivo, dados) {
 
 const DATABASE_FILE_SYSTEM = 'typeSystemDB.json';
 
-function addObjectSystemSeq(url_chat) {
+
+function readMapSystem(url_chat) {
+  const dadosAtuais = readJSONFile(DATABASE_FILE_SYSTEM);
+  const objeto = dadosAtuais.find(obj => obj.url_chat !== url_chat);
+  return objeto;
+}
+
+function addObjectSystem(url_chat, openaikey, elevenlabskey) {
   const dadosAtuais = readJSONFile(DATABASE_FILE_SYSTEM);
 
   // Verificar a unicidade do url_chat
@@ -640,31 +979,14 @@ function addObjectSystemSeq(url_chat) {
     throw new Error('O URL Chat já existe no banco de dados.');
   }
 
-  const objeto = {url_chat};  
+  const objeto = {url_chat, openaikey, elevenlabskey};  
 
   dadosAtuais.push(objeto);
   writeJSONFile(DATABASE_FILE_SYSTEM, dadosAtuais);
 }
 
-function addObjectSystem(url_chat) {  
-  const dadosAtuais = [{ url_chat }];
-  writeJSONFile(DATABASE_FILE_SYSTEM, dadosAtuais);
-}
-
-function readMapSystem(url_chat) {
-  const dadosAtuais = readJSONFile(DATABASE_FILE_SYSTEM);
-  const objeto = dadosAtuais.find(obj => obj.url_chat !== url_chat);
-  return objeto;
-}
-
 function readURL(indice) {
   const dadosAtuais = readJSONFile(DATABASE_FILE_SYSTEM);
-
-  // Verifica se DATABASE_FILE_SYSTEM é não vazio
-  if (!dadosAtuais || dadosAtuais.length === 0) {
-    console.error('O arquivo de dados está vazio.');
-    return null;
-  }
 
   // Verifica se o índice é válido
   if (indice < 0 || indice >= dadosAtuais.length) {
@@ -672,8 +994,27 @@ function readURL(indice) {
       return null;
   }
 
-  // Retorna a URL correspondente ao índice fornecido
-  return dadosAtuais[indice].url_chat;
+  // Retorna a URL e as chaves correspondentes ao índice fornecido
+  const objeto = dadosAtuais[indice];
+  return {
+      url_chat: objeto.url_chat,
+      openaikey: objeto.openaikey,
+      elevenlabskey: objeto.elevenlabskey
+  };
+}
+
+function updateObjectSystem(url_chat, openaikey, elevenlabskey) {
+  const dadosAtuais = readJSONFile(DATABASE_FILE_SYSTEM);
+  const objeto = dadosAtuais.find(obj => obj.url_chat === url_chat);
+
+  if (!objeto) {
+      throw new Error('URL Chat não encontrado.');
+  }
+
+  objeto.openaikey = openaikey;
+  objeto.elevenlabskey = elevenlabskey;
+
+  writeJSONFile(DATABASE_FILE_SYSTEM, dadosAtuais);
 }
 
 function deleteObjectSystem(url_chat) {
@@ -707,7 +1048,7 @@ function existsTheDBSystem() {
 
 //Gestão de dados do controle das sessões
 
-function addObject(numeroId, sessionid, numero, id, interact, fluxo, optout, flow, maxObjects) {
+function addObject(numeroId, sessionid, numero, id, interact, fluxo, optout, flow, nextAudio, nextImage, prompt, maxObjects) {
   const dadosAtuais = readJSONFile(DATABASE_FILE);
 
   // Verificar a unicidade do numeroId
@@ -716,7 +1057,7 @@ function addObject(numeroId, sessionid, numero, id, interact, fluxo, optout, flo
     throw new Error('O numeroId já existe no banco de dados.');
   }
 
-  const objeto = { numeroId, sessionid, numero, id, interact, fluxo, optout, flow};
+  const objeto = { numeroId, sessionid, numero, id, interact, fluxo, optout, flow, nextAudio, nextImage, prompt};
 
   if (dadosAtuais.length >= maxObjects) {
     // Excluir o objeto mais antigo
@@ -742,6 +1083,48 @@ function deleteObject(numeroId) {
 function existsDB(numeroId) {
   const dadosAtuais = readJSONFile(DATABASE_FILE);
   return dadosAtuais.some(obj => obj.numeroId === numeroId);
+}
+
+function updatePrompt(numeroId, prompt) {
+  const dadosAtuais = readJSONFile(DATABASE_FILE);
+  const objeto = dadosAtuais.find(obj => obj.numeroId === numeroId);
+  if (objeto) {
+    objeto.prompt = prompt;
+    writeJSONFile(DATABASE_FILE, dadosAtuais);
+  }
+}  
+
+function readPrompt(numeroId) {
+  const objeto = readMap(numeroId);
+  return objeto ? objeto.prompt : undefined;
+}
+
+function updateNextAudio(numeroId, nextAudio) {
+  const dadosAtuais = readJSONFile(DATABASE_FILE);
+  const objeto = dadosAtuais.find(obj => obj.numeroId === numeroId);
+  if (objeto) {
+    objeto.nextAudio = nextAudio;
+    writeJSONFile(DATABASE_FILE, dadosAtuais);
+  }
+}  
+
+function readNextAudio(numeroId) {
+  const objeto = readMap(numeroId);
+  return objeto ? objeto.nextAudio : undefined;
+}
+
+function updateNextImage(numeroId, nextImage) {
+  const dadosAtuais = readJSONFile(DATABASE_FILE);
+  const objeto = dadosAtuais.find(obj => obj.numeroId === numeroId);
+  if (objeto) {
+    objeto.nextImage = nextImage;
+    writeJSONFile(DATABASE_FILE, dadosAtuais);
+  }
+}  
+
+function readNextImage(numeroId) {
+  const objeto = readMap(numeroId);
+  return objeto ? objeto.nextImage : undefined;
 }
 
 function updateSessionId(numeroId, sessionid) {
@@ -1189,7 +1572,8 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
     }
 
     if (!existsDB(datafrom)) {
-      addObject(datafrom, response.data.sessionId, datafrom.replace(/\D/g, ''), JSON.stringify(data.id.id), 'typing', fluxo, false, "active", db_length);
+      //addObject(datafrom, response.data.sessionId, datafrom.replace(/\D/g, ''), JSON.stringify(data.id.id), 'typing', fluxo, false, "active", db_length);
+      addObject(datafrom, response.data.sessionId, datafrom.replace(/\D/g, ''), JSON.stringify(data.id.id), 'typing', fluxo, false, "active", false, false, null, db_length);
     }
     
     if(datafrom.endsWith('@c.us')){
@@ -1349,7 +1733,214 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
           sendMessageWithRetry();
           
         }
-        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!directmessage')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada'))) {
+        if (formattedText.startsWith('!entenderaudio')) {          
+          if (existsDB(datafrom)) {
+            updateNextAudio(datafrom, true);
+          }
+        }
+        if (formattedText.startsWith('!entenderimagem')) {          
+          if (existsDB(datafrom)) {
+            updateNextImage(datafrom, true);
+            updatePrompt(datafrom, formattedText.split(' ').slice(1).join(' '));
+          }
+        }
+        if (formattedText.startsWith('!audioopenai')) {          
+          if (existsDB(datafrom)) {
+      
+              try {
+                  // Sintetizar a fala
+                  await brokerMaster(sintetizarFalaOpenAI, formattedText.split(' ').slice(2).join(' '), datafrom.split('@c.us')[0], formattedText.split(' ')[1]);
+      
+                  // Caminho do arquivo de áudio gerado
+                  const mediaPath = `audiosintetizado/${datafrom.split('@c.us')[0]}.ogg`;
+      
+                  // Aqui você insere a lógica para tratar a mídia, se necessário
+                  const media = await tratarMidia(mediaPath);
+      
+                  let retries = 0;
+                  const maxRetries = 15; // Máximo de tentativas
+                  let delay = init_delay; // Tempo inicial de espera em milissegundos
+      
+                  const sendRequest = async () => {
+                      const response = await fetch('http://localhost:8888/sendMessage', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                              destinatario: datafrom,
+                              media: media,
+                              tipo: "audio",                    
+                              msg: data,
+                              token: token
+                          })
+                      });
+      
+                      if (!response.ok) {
+                          throw new Error(`Request failed with status ${response.status}`);
+                      }
+      
+                      return await response.json();
+                  };
+      
+                  while (retries < maxRetries) {
+                      try {
+                          await sendRequest();
+                          restartAPI = false; // Reinicializa o flag quando a requisição é bem-sucedida
+                          break; // Sai do loop se a requisição for bem-sucedida
+                      } catch (error) {
+                          retries++;
+                          console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
+                          if (!restartAPI) {
+                              myEmitter.emit('errorEvent', error);
+                              restartAPI = true;
+                          }
+                          await new Promise(resolve => setTimeout(resolve, delay));
+                          delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                      }
+                  }
+      
+                  if (retries === maxRetries) {
+                      console.error('Erro: Número máximo de tentativas de envio atingido.');
+                  }
+      
+              } catch (error) {
+                  console.error('Erro ao sintetizar fala:', error);
+              }
+          }
+        }
+        if (formattedText.startsWith('!audioeleven')) {
+          if (existsDB(datafrom)) {
+      
+              try {
+                  // Extrai o nome da voz e o texto a ser sintetizado do comando
+                  // Sintetizar a fala usando ElevenLabs
+                  await brokerMaster(sintetizarFalaEleven, formattedText.split(' ').slice(2).join(' '), datafrom.split('@c.us')[0], formattedText.split(' ')[1]);
+      
+                  // Caminho do arquivo de áudio gerado
+                  const mediaPath = `audiosintetizado/${datafrom.split('@c.us')[0]}.ogg`;
+      
+                  // Aqui você insere a lógica para tratar a mídia, se necessário
+                  const media = await tratarMidia(mediaPath);
+      
+                  let retries = 0;
+                  const maxRetries = 15; // Máximo de tentativas
+                  let delay = init_delay; // Tempo inicial de espera em milissegundos
+      
+                  const sendRequest = async () => {
+                      const response = await fetch('http://localhost:8888/sendMessage', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                              destinatario: datafrom,
+                              media: media,
+                              tipo: "audio",                    
+                              msg: "",
+                              token: token
+                          })
+                      });
+      
+                      if (!response.ok) {
+                          throw new Error(`Request failed with status ${response.status}`);
+                      }
+      
+                      return await response.json();
+                  };
+      
+                  while (retries < maxRetries) {
+                      try {
+                          await sendRequest();
+                          restartAPI = false; // Reinicializa o flag quando a requisição é bem-sucedida
+                          break; // Sai do loop se a requisição for bem-sucedida
+                      } catch (error) {
+                          retries++;
+                          console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
+                          if (!restartAPI) {
+                              myEmitter.emit('errorEvent', error);
+                              restartAPI = true;
+                          }
+                          await new Promise(resolve => setTimeout(resolve, delay));
+                          delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                      }
+                  }
+      
+                  if (retries === maxRetries) {
+                      console.error('Erro: Número máximo de tentativas de envio atingido.');
+                  }
+      
+              } catch (error) {
+                  console.error('Erro ao sintetizar fala com ElevenLabs:', error);
+              }
+          }
+        }
+        if (formattedText.startsWith('!imagemopenai')) {
+          await runDallE(formattedText.split(' ').slice(1).join(' '), 'imagemliquida', datafrom.split('@c.us')[0])
+              .then(async (filePath) => {
+                while (true) {
+                  try {
+                      if (fs.existsSync(filePath)) {
+                          await Jimp.read(filePath); // Tenta ler a imagem
+                          break; // Se a imagem for lida sem erros, saia do loop
+                      }
+                  } catch (error) {
+                      console.log("A imagem ainda está sendo renderizada...");
+                  }
+                  await new Promise(resolve => setTimeout(resolve, 1000)); // Aguarda 1 segundo
+              }
+      
+                  let retries = 0;
+                  const maxRetries = 15; // Máximo de tentativas
+                  let delay = init_delay; // Tempo inicial de espera em milissegundos
+      
+                  const sendRequest = async () => {
+                      const media = await tratarMidia(filePath);
+                      const response = await fetch('http://localhost:8888/sendMessage', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                              destinatario: datafrom,
+                              media: media,
+                              tipo: "image",
+                              msg: "",
+                              token: token
+                          })
+                      });
+      
+                      if (!response.ok) {
+                          throw new Error(`Request failed with status ${response.status}`);
+                      }
+      
+                      return await response.json();
+                  };
+      
+                  while (retries < maxRetries) {
+                    try {
+                        await sendRequest();
+                        restartAPI = false; // Reinicializa o flag quando a requisição é bem-sucedida
+                        break; // Sai do loop se a requisição for bem-sucedida
+                    } catch (error) {
+                        retries++;
+                        console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
+                        if (!restartAPI) {
+                            myEmitter.emit('errorEvent', error);
+                            restartAPI = true;
+                        }
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                    }
+                }
+      
+                  if (retries === maxRetries) {
+                      console.error('Erro: Número máximo de tentativas de envio atingido.');
+                  } else {
+                      // Apagar a imagem após o envio bem-sucedido
+                      fs.unlink(filePath, (err) => {
+                          if (err) console.error('Erro ao apagar a imagem:', err);
+                          else console.log(`Imagem ${filePath} apagada com sucesso.`);
+                      });
+                  }
+              })
+              .catch((error) => console.error("Erro durante a geração da imagem:", error));
+        }       
+        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!directmessage')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada')) && !(formattedText.startsWith('!entenderaudio')) && !(formattedText.startsWith('!entenderimagem')) && !(formattedText.startsWith('!audioopenai')) && !(formattedText.startsWith('!audioeleven')) && !(formattedText.startsWith('!imagemopenai'))) {
           let retries = 0;
           const maxRetries = 15; // Máximo de tentativas
           let delay = init_delay; // Tempo inicial de espera em milissegundos
@@ -2401,7 +2992,8 @@ async function createSessionJohnny(data, url_registro, fluxo) {
     const messages = response.data.messages;
 
     if (!existsDB(data.from)) {
-      addObject(data.from, response.data.sessionId, data.from.replace(/\D/g, ''), JSON.stringify(data.id.id), 'typing', fluxo, false, "active", db_length);
+      //addObject(data.from, response.data.sessionId, data.from.replace(/\D/g, ''), JSON.stringify(data.id.id), 'typing', fluxo, false, "active", db_length);
+      addObject(data.from, response.data.sessionId, data.from.replace(/\D/g, ''), JSON.stringify(data.id.id), 'typing', fluxo, false, "active", false, false, null, db_length);
     }    
     
     for (const message of messages){
@@ -2558,8 +3150,216 @@ async function createSessionJohnny(data, url_registro, fluxo) {
         
           sendMessageWithRetry();
           
-        }        
-        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!directmessage')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada'))) {
+        }
+        if (formattedText.startsWith('!entenderaudio')) {          
+          if (existsDB(data.from)) {
+            updateNextAudio(data.from, true);
+          }
+        }
+        if (formattedText.startsWith('!entenderimagem')) {          
+          if (existsDB(data.from)) {
+            updateNextImage(data.from, true);
+            updatePrompt(data.from, formattedText.split(' ').slice(1).join(' '));
+          }
+        }
+        if (formattedText.startsWith('!audioopenai')) {          
+          if (existsDB(data.from)) {
+      
+              try {
+                  // Sintetizar a fala
+                  await brokerMaster(sintetizarFalaOpenAI, formattedText.split(' ').slice(2).join(' '), data.from.split('@c.us')[0], formattedText.split(' ')[1]);
+      
+                  // Caminho do arquivo de áudio gerado
+                  const mediaPath = `audiosintetizado/${data.from.split('@c.us')[0]}.ogg`;
+      
+                  // Aqui você insere a lógica para tratar a mídia, se necessário
+                  const media = await tratarMidia(mediaPath);
+      
+                  let retries = 0;
+                  const maxRetries = 15; // Máximo de tentativas
+                  let delay = init_delay; // Tempo inicial de espera em milissegundos
+      
+                  const sendRequest = async () => {
+                      const response = await fetch('http://localhost:8888/sendMessage', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                              destinatario: data.from,
+                              media: media,
+                              tipo: "audio",                    
+                              msg: data,
+                              token: token
+                          })
+                      });
+      
+                      if (!response.ok) {
+                          throw new Error(`Request failed with status ${response.status}`);
+                      }
+      
+                      return await response.json();
+                  };
+      
+                  while (retries < maxRetries) {
+                      try {
+                          await sendRequest();
+                          restartAPI = false; // Reinicializa o flag quando a requisição é bem-sucedida
+                          break; // Sai do loop se a requisição for bem-sucedida
+                      } catch (error) {
+                          retries++;
+                          console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
+                          if (!restartAPI) {
+                              myEmitter.emit('errorEvent', error);
+                              restartAPI = true;
+                          }
+                          await new Promise(resolve => setTimeout(resolve, delay));
+                          delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                      }
+                  }
+      
+                  if (retries === maxRetries) {
+                      console.error('Erro: Número máximo de tentativas de envio atingido.');
+                  }
+      
+              } catch (error) {
+                  console.error('Erro ao sintetizar fala:', error);
+              }
+          }
+        }
+        if (formattedText.startsWith('!audioeleven')) {
+          if (existsDB(data.from)) {
+      
+              try {
+                  // Extrai o nome da voz e o texto a ser sintetizado do comando
+                  // Sintetizar a fala usando ElevenLabs
+                  await brokerMaster(sintetizarFalaEleven, formattedText.split(' ').slice(2).join(' '), data.from.split('@c.us')[0], formattedText.split(' ')[1]);
+      
+                  // Caminho do arquivo de áudio gerado
+                  const mediaPath = `audiosintetizado/${data.from.split('@c.us')[0]}.ogg`;
+      
+                  // Aqui você insere a lógica para tratar a mídia, se necessário
+                  const media = await tratarMidia(mediaPath);
+      
+                  let retries = 0;
+                  const maxRetries = 15; // Máximo de tentativas
+                  let delay = init_delay; // Tempo inicial de espera em milissegundos
+      
+                  const sendRequest = async () => {
+                      const response = await fetch('http://localhost:8888/sendMessage', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                              destinatario: data.from,
+                              media: media,
+                              tipo: "audio",                    
+                              msg: "",
+                              token: token
+                          })
+                      });
+      
+                      if (!response.ok) {
+                          throw new Error(`Request failed with status ${response.status}`);
+                      }
+      
+                      return await response.json();
+                  };
+      
+                  while (retries < maxRetries) {
+                      try {
+                          await sendRequest();
+                          restartAPI = false; // Reinicializa o flag quando a requisição é bem-sucedida
+                          break; // Sai do loop se a requisição for bem-sucedida
+                      } catch (error) {
+                          retries++;
+                          console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
+                          if (!restartAPI) {
+                              myEmitter.emit('errorEvent', error);
+                              restartAPI = true;
+                          }
+                          await new Promise(resolve => setTimeout(resolve, delay));
+                          delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                      }
+                  }
+      
+                  if (retries === maxRetries) {
+                      console.error('Erro: Número máximo de tentativas de envio atingido.');
+                  }
+      
+              } catch (error) {
+                  console.error('Erro ao sintetizar fala com ElevenLabs:', error);
+              }
+          }
+        }
+        if (formattedText.startsWith('!imagemopenai')) {
+          await runDallE(formattedText.split(' ').slice(1).join(' '), 'imagemliquida', data.from.split('@c.us')[0])
+              .then(async (filePath) => {
+                  // Verifica se a imagem existe antes de enviar
+                  while (true) {
+                try {
+                    if (fs.existsSync(filePath)) {
+                        await Jimp.read(filePath); // Tenta ler a imagem
+                        break; // Se a imagem for lida sem erros, saia do loop
+                    }
+                } catch (error) {
+                    console.log("A imagem ainda está sendo renderizada...");
+                }
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Aguarda 1 segundo
+            }
+      
+                  let retries = 0;
+                  const maxRetries = 15; // Máximo de tentativas
+                  let delay = init_delay; // Tempo inicial de espera em milissegundos
+      
+                  const sendRequest = async () => {
+                      const media = await tratarMidia(filePath);
+                      const response = await fetch('http://localhost:8888/sendMessage', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                              destinatario: data.from,
+                              media: media,
+                              tipo: "image",
+                              msg: "",
+                              token: token
+                          })
+                      });
+      
+                      if (!response.ok) {
+                          throw new Error(`Request failed with status ${response.status}`);
+                      }
+      
+                      return await response.json();
+                  };
+      
+                  while (retries < maxRetries) {
+                    try {
+                        await sendRequest();
+                        restartAPI = false; // Reinicializa o flag quando a requisição é bem-sucedida
+                        break; // Sai do loop se a requisição for bem-sucedida
+                    } catch (error) {
+                        retries++;
+                        console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
+                        if (!restartAPI) {
+                            myEmitter.emit('errorEvent', error);
+                            restartAPI = true;
+                        }
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                    }
+                }
+      
+                  if (retries === maxRetries) {
+                      console.error('Erro: Número máximo de tentativas de envio atingido.');
+                  } else {
+                      // Apagar a imagem após o envio bem-sucedido
+                      fs.unlink(filePath, (err) => {
+                          if (err) console.error('Erro ao apagar a imagem:', err);
+                          else console.log(`Imagem ${filePath} apagada com sucesso.`);
+                      });
+                  }
+              })
+              .catch((error) => console.error("Erro durante a geração da imagem:", error));
+        }           
+        if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!directmessage')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada')) && !(formattedText.startsWith('!entenderaudio')) && !(formattedText.startsWith('!entenderimagem')) && !(formattedText.startsWith('!audioopenai')) && !(formattedText.startsWith('!audioeleven')) && !(formattedText.startsWith('!imagemopenai'))) {
           let retries = 0;
           const maxRetries = 15; // Máximo de tentativas
           let delay = init_delay; // Tempo inicial de espera em milissegundos
@@ -2790,7 +3590,7 @@ async function createSessionJohnny(data, url_registro, fluxo) {
         
           sendMessageWithRetry();
           }
-      }
+      } 
     }
     const input = response.data.input
     if (input) {
@@ -2842,28 +3642,35 @@ async function waitWithDelay(inputString) {
     }
 }
 
-async function tratarMidia(message) {  
-    try {
-      let fileUrl = message.content.url; // URL do arquivo
-      let mimetype;
-      let filename;
+function getMimeType(filePath) {
+  const mimeTypes = {
+      '.mp3': 'audio/mpeg',
+      '.mp4': 'video/mp4',
+      '.jpeg': 'image/jpeg',
+      '.jpg': 'image/jpeg',
+      '.png': 'image/png',
+      '.pdf': 'application/pdf',
+      '.ogg': 'audio/ogg',
+      // Adicione mais mapeamentos conforme necessário
+  };
 
-      // Use Axios para buscar o arquivo e determinar o MIME type.
-      const attachment = await axios.get(fileUrl, {
-        responseType: 'arraybuffer',
-      }).then(response => {
-        mimetype = response.headers['content-type'];
-        filename = fileUrl.split("/").pop();
-        return response.data.toString('base64');
-      });
+  const ext = path.extname(filePath).toLowerCase();
+  return mimeTypes[ext] || 'application/octet-stream'; // Tipo padrão se não reconhecido
+}
+
+async function tratarMidia(filePath) {
+  try {
+      const attachment = await fsp.readFile(filePath, { encoding: 'base64' });
+      const mimetype = getMimeType(filePath);
+      const filename = path.basename(filePath);
 
       if (attachment) {
-        const media = new MessageMedia(mimetype, attachment, filename);
-        return media;
+          const media = new MessageMedia(mimetype, attachment, filename);
+          return media;
       }
-    } catch (e) {
+  } catch (e) {
       console.error(e);
-    }  
+  }
 }
 
 async function tratarMidiaObj(message) {  
@@ -2903,6 +3710,23 @@ initializeDBTypebotV5();
 // Inicializando banco de dados dos disparos agendados de respsotas rapidas (Novo Remarketing)
 initializeDBTypebotV6();
 
+const apiInit = readURL(0);
+let openai; // Declaração da variável fora do bloco if
+
+if (apiInit) {    
+    if (apiInit.openaikey) {      
+      openai = new OpenAI({ apiKey: apiInit.openaikey }); // Inicialização da variável
+    } else {
+      console.error("Chave OpenAI não encontrada no objeto.");
+    }
+} else {
+    console.error("Objeto não encontrado no banco de dados.");
+}
+
+async function initializeClient(openaiKey) {    
+    openai = new OpenAI({ apiKey: openaiKey });
+}
+
 client.on("disconnected", async (reason) => {
   try {
       console.info(`Disconnected session: ${session}, reason: ${reason}`);
@@ -2938,14 +3762,16 @@ client.on('message', async msg => {
       }
     }    
    } else {
-    if (existsDB(msg.from) && msg.from.endsWith('@c.us')  && readInteract(msg.from) === 'done' && readId(msg.from) !== JSON.stringify(msg.id.id) && !msg.hasMedia && msg.body !== null && readFlow(msg.from) === "active"){
+    if (existsDB(msg.from) && msg.from.endsWith('@c.us')  && readInteract(msg.from) === 'done' && readId(msg.from) !== JSON.stringify(msg.id.id) && msg.body !== null && readFlow(msg.from) === "active"){
       updateInteract(msg.from, 'typing');
       updateId(msg.from, JSON.stringify(msg.id.id));  
-      const chat = await msg.getChat();
+      const chat = await msg.getChat();       
+        
         const sessionId = await readSessionId(msg.from);
-        const content = msg.body;
-        //const chaturl = `${url_chat}${sessionId}/continueChat`;
-        const chaturl = `${readURL(0)}${sessionId}/continueChat`;       
+        const content = await processMessageIA(msg);
+        updateNextAudio(msg.from, false);
+        updateNextImage(msg.from, false);
+        const chaturl = `${readURL(0).url_chat}${sessionId}/continueChat`;
         
         const reqData = {
           message: content,
@@ -3034,6 +3860,36 @@ client.on('message', async msg => {
                     const arquivo = formattedText.split(' ')[1];
                     await sendMediaLocalEndPoint(msg.from, arquivo); // Envia a requisição com retry
                 }
+              }              
+              if (formattedText.startsWith('!rapidaagendada')) {          
+                if (existsDB(msg.from)) {              
+                    const args = formattedText.slice('!rapidaagendada'.length).trim().split(/\s+/);              
+                    const hours = parseFloat(args[0]);              
+                    const triggerMessage = args.slice(1).join(' ');      
+                    if (!isNaN(hours) && triggerMessage) {                  
+                        scheduleQuickResponse(hours, msg.from, triggerMessage);
+                        console.log('Resposta rápida agendada com sucesso.');
+
+                        const recipient = msg.from; // Número do destinatário
+                        const scheduledDateTime = new Date(); // Configura para uma data/hora específica
+                        scheduledDateTime.setHours(scheduledDateTime.getHours() + hours); // Agendando para 1 hora a partir de agora
+                        const triggerPhrase = triggerMessage;
+
+                        // Objeto de configuração do agendamento
+                        const agendamentoConfig = {
+                        scheduledDateTime, // A data/hora que você calculou
+                        triggerPhrase // A mensagem que você deseja enviar
+                        };
+
+                        // Adicionando o objeto ao banco de dados V6
+                        addToDBTypebotV6(recipient, agendamentoConfig);
+                        //deleteObject(msg.from);
+                    } else {
+                        console.error('Erro: Argumentos inválidos para o comando !rapidaagendada.');
+                    }
+                } else {
+                    console.log('Destinatário não encontrado no banco de dados.');
+                }
               }
               if (formattedText.startsWith('!directmessage')) {
                 const partes = formattedText.split(' ');
@@ -3091,38 +3947,217 @@ client.on('message', async msg => {
               
                 sendMessageWithRetry();
                 
-              }              
-              if (formattedText.startsWith('!rapidaagendada')) {          
-                if (existsDB(msg.from)) {              
-                    const args = formattedText.slice('!rapidaagendada'.length).trim().split(/\s+/);              
-                    const hours = parseFloat(args[0]);              
-                    const triggerMessage = args.slice(1).join(' ');      
-                    if (!isNaN(hours) && triggerMessage) {                  
-                        scheduleQuickResponse(hours, msg.from, triggerMessage);
-                        console.log('Resposta rápida agendada com sucesso.');
-
-                        const recipient = msg.from; // Número do destinatário
-                        const scheduledDateTime = new Date(); // Configura para uma data/hora específica
-                        scheduledDateTime.setHours(scheduledDateTime.getHours() + hours); // Agendando para 1 hora a partir de agora
-                        const triggerPhrase = triggerMessage;
-
-                        // Objeto de configuração do agendamento
-                        const agendamentoConfig = {
-                        scheduledDateTime, // A data/hora que você calculou
-                        triggerPhrase // A mensagem que você deseja enviar
-                        };
-
-                        // Adicionando o objeto ao banco de dados V6
-                        addToDBTypebotV6(recipient, agendamentoConfig);
-                        //deleteObject(msg.from);
-                    } else {
-                        console.error('Erro: Argumentos inválidos para o comando !rapidaagendada.');
-                    }
-                } else {
-                    console.log('Destinatário não encontrado no banco de dados.');
+              }
+              if (formattedText.startsWith('!entenderaudio')) {          
+                if (existsDB(msg.from)) {
+                  updateNextAudio(msg.from, true);
                 }
-            }      
-              if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!directmessage')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada'))) {
+              }
+              if (formattedText.startsWith('!entenderimagem')) {          
+                if (existsDB(msg.from)) {
+                  updateNextImage(msg.from, true);
+                  updatePrompt(msg.from, formattedText.split(' ').slice(1).join(' '));
+                }
+              }
+              if (formattedText.startsWith('!audioopenai')) {          
+                if (existsDB(msg.from)) {
+            
+                    try {
+                        // Sintetizar a fala
+                        await brokerMaster(sintetizarFalaOpenAI, formattedText.split(' ').slice(2).join(' '), msg.from.split('@c.us')[0], formattedText.split(' ')[1]);
+            
+                        // Caminho do arquivo de áudio gerado
+                        const mediaPath = `audiosintetizado/${msg.from.split('@c.us')[0]}.ogg`;
+            
+                        // Aqui você insere a lógica para tratar a mídia, se necessário
+                        const media = await tratarMidia(mediaPath);
+            
+                        let retries = 0;
+                        const maxRetries = 15; // Máximo de tentativas
+                        let delay = init_delay; // Tempo inicial de espera em milissegundos
+            
+                        const sendRequest = async () => {
+                            const response = await fetch('http://localhost:8888/sendMessage', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    destinatario: msg.from,
+                                    media: media,
+                                    tipo: "audio",                    
+                                    msg: msg,
+                                    token: token
+                                })
+                            });
+            
+                            if (!response.ok) {
+                                throw new Error(`Request failed with status ${response.status}`);
+                            }
+            
+                            return await response.json();
+                        };
+            
+                        while (retries < maxRetries) {
+                            try {
+                                await sendRequest();
+                                restartAPI = false; // Reinicializa o flag quando a requisição é bem-sucedida
+                                break; // Sai do loop se a requisição for bem-sucedida
+                            } catch (error) {
+                                retries++;
+                                console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
+                                if (!restartAPI) {
+                                    myEmitter.emit('errorEvent', error);
+                                    restartAPI = true;
+                                }
+                                await new Promise(resolve => setTimeout(resolve, delay));
+                                delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                            }
+                        }
+            
+                        if (retries === maxRetries) {
+                            console.error('Erro: Número máximo de tentativas de envio atingido.');
+                        }
+            
+                    } catch (error) {
+                        console.error('Erro ao sintetizar fala:', error);
+                    }
+                }
+              }
+              if (formattedText.startsWith('!audioeleven')) {
+          if (existsDB(msg.from)) {
+      
+              try {
+                  // Extrai o nome da voz e o texto a ser sintetizado do comando
+                  // Sintetizar a fala usando ElevenLabs
+                  await brokerMaster(sintetizarFalaEleven, formattedText.split(' ').slice(2).join(' '), msg.from.split('@c.us')[0], formattedText.split(' ')[1]);
+      
+                  // Caminho do arquivo de áudio gerado
+                  const mediaPath = `audiosintetizado/${msg.from.split('@c.us')[0]}.ogg`;
+      
+                  // Aqui você insere a lógica para tratar a mídia, se necessário
+                  const media = await tratarMidia(mediaPath);
+      
+                  let retries = 0;
+                  const maxRetries = 15; // Máximo de tentativas
+                  let delay = init_delay; // Tempo inicial de espera em milissegundos
+      
+                  const sendRequest = async () => {
+                      const response = await fetch('http://localhost:8888/sendMessage', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                              destinatario: msg.from,
+                              media: media,
+                              tipo: "audio",                    
+                              msg: "",
+                              token: token
+                          })
+                      });
+      
+                      if (!response.ok) {
+                          throw new Error(`Request failed with status ${response.status}`);
+                      }
+      
+                      return await response.json();
+                  };
+      
+                  while (retries < maxRetries) {
+                      try {
+                          await sendRequest();
+                          restartAPI = false; // Reinicializa o flag quando a requisição é bem-sucedida
+                          break; // Sai do loop se a requisição for bem-sucedida
+                      } catch (error) {
+                          retries++;
+                          console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
+                          if (!restartAPI) {
+                              myEmitter.emit('errorEvent', error);
+                              restartAPI = true;
+                          }
+                          await new Promise(resolve => setTimeout(resolve, delay));
+                          delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                      }
+                  }
+      
+                  if (retries === maxRetries) {
+                      console.error('Erro: Número máximo de tentativas de envio atingido.');
+                  }
+      
+              } catch (error) {
+                  console.error('Erro ao sintetizar fala com ElevenLabs:', error);
+              }
+          }
+              }
+              if (formattedText.startsWith('!imagemopenai')) {
+                
+                await runDallE(formattedText.split(' ').slice(1).join(' '), 'imagemliquida', msg.from.split('@c.us')[0])
+                    .then(async (filePath) => {
+                        // Verifica se a imagem existe antes de enviar
+                        while (true) {
+                try {
+                    if (fs.existsSync(filePath)) {
+                        await Jimp.read(filePath); // Tenta ler a imagem
+                        break; // Se a imagem for lida sem erros, saia do loop
+                    }
+                } catch (error) {
+                    console.log("A imagem ainda está sendo renderizada...");
+                }
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Aguarda 1 segundo
+            }
+            
+                        let retries = 0;
+                        const maxRetries = 15; // Máximo de tentativas
+                        let delay = init_delay; // Tempo inicial de espera em milissegundos
+            
+                        const sendRequest = async () => {
+                            const media = await tratarMidia(filePath);
+                            const response = await fetch('http://localhost:8888/sendMessage', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    destinatario: msg.from,
+                                    media: media,
+                                    tipo: "image",
+                                    msg: "",
+                                    token: token
+                                })
+                            });
+            
+                            if (!response.ok) {
+                                throw new Error(`Request failed with status ${response.status}`);
+                            }
+            
+                            return await response.json();
+                        };
+            
+                        while (retries < maxRetries) {
+                          try {
+                              await sendRequest();
+                              restartAPI = false; // Reinicializa o flag quando a requisição é bem-sucedida
+                              break; // Sai do loop se a requisição for bem-sucedida
+                          } catch (error) {
+                              retries++;
+                              console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
+                              if (!restartAPI) {
+                                  myEmitter.emit('errorEvent', error);
+                                  restartAPI = true;
+                              }
+                              await new Promise(resolve => setTimeout(resolve, delay));
+                              delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                          }
+                      }
+            
+                        if (retries === maxRetries) {
+                            console.error('Erro: Número máximo de tentativas de envio atingido.');
+                        } else {
+                            // Apagar a imagem após o envio bem-sucedido
+                            fs.unlink(filePath, (err) => {
+                                if (err) console.error('Erro ao apagar a imagem:', err);
+                                else console.log(`Imagem ${filePath} apagada com sucesso.`);
+                            });
+                        }
+                    })
+                    .catch((error) => console.error("Erro durante a geração da imagem:", error));
+              }
+              if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!directmessage')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada')) && !(formattedText.startsWith('!entenderaudio')) && !(formattedText.startsWith('!entenderimagem')) && !(formattedText.startsWith('!audioopenai')) && !(formattedText.startsWith('!audioeleven')) && !(formattedText.startsWith('!imagemopenai'))) {
                 let retries = 0;
                 const maxRetries = 15; // Máximo de tentativas
                 let delay = init_delay; // Tempo inicial de espera em milissegundos                           
@@ -3490,80 +4525,116 @@ let system_aux = false;
 
 client.on('message_create', async (msg) => {
 
-  // Comando ping
-  if (msg.fromMe && msg.body.startsWith('!ping') && msg.to === msg.from) {  
-    await sendRequest(msg.from, `Pong`, "text");    
-  } 
-
   // Comandos do central de controle
   if (msg.fromMe && msg.body.startsWith('!help') && msg.to === msg.from) {        
     
-    // Chamar sendRequest ao invés de client.sendMessage
-    await sendRequest(msg.from, `*Sistema de Controle v1.0 - JohnnyZap*
-  
-  *Preparar Typebot (primeira ação)*
-  Comando: "!ativar"
-  
-  *Adicionar Novo Fluxo*
-  Comando: "!adicionar"
-        
-  *Excluir Fluxo*
-  Comando: "!excluir"
-        
-  *Cadastrar Resposta Rápida*
-  Comando: "!rapida"
-        
-  *Excluir Resposta Rápida*
-  Comando: "!rapidaexcluir"
-        
-  *Adicionar Remarketing*
-  Comando: "!rmktadicionar"
-        
-  *Excluir Remarketing*
-  Comando: "!rmktexcluir"
-        
-  *Pegar o ID de um grupo*
-  Envie ao grupo: "Qual o id?"
-        
-  *Excluir grupo*
-  Comando: "!grupoexcluir"
-        
-  *Criar Lista de Grupo*
-  !listagrupo id_grupo listagrupo.json
-  
-  *Carregar Lista para Disparo*
-  Comando: !listacarregar
-        
-  *Disparar Mensagens*
-  !listadisparo lista.json min_delay max_delay init_pos end_pos nome_fluxo`, "text");    
-  } 
-    // Configurar Main Infos do Systema
-  if (msg.fromMe && msg.body === "!ativar" && !existsTheDBSystem() && msg.to === msg.from) {
-      await sendRequest(msg.from, `*Vamos preparar o seu JohnnyZap*
-  
-  Insira a URL do seu Typebot, por exemplo:
-  https://seutypebot.vm.elestio.app/api/v1/sessions/`, "text");
-  
-  addObjectSelf(msg.from, 'stepAtivar01', JSON.stringify(msg.id.id), 'done', null, null, null);
-    }
-  
-    if ((msg.body.startsWith('http://') || msg.body.startsWith('https://')) && msg.fromMe && msg.body !== null && msg.to === msg.from && !existsTheDBSystem() && existsDBSelf(msg.from) && readFlowSelf(msg.from) === 'stepAtivar01' && readIdSelf(msg.from) !== JSON.stringify(msg.id.id) && readInteractSelf(msg.from) === 'done' && !msg.hasMedia) {
-      updateInteractSelf(msg.from, 'typing');
-      updateIdSelf(msg.from, JSON.stringify(msg.id.id));
-      updateURLRegistro(msg.from, msg.body);
-  
-  await sendRequest(msg.from, `Typebot preparado! 🚀
-  
-  ${readURLRegistro(msg.from)}
-  
-  *Pode começar a usar o sistema* 🤖`, "text");
-  
-      addObjectSystem(await readURLRegistro(msg.from));
-      updateFlowSelf(msg.from,'stepAtivar02');
-      updateInteractSelf(msg.from, 'done');
-      deleteObjectSelf(msg.from);
+  // Chamar sendRequest ao invés de client.sendMessage
+  await sendRequest(msg.from, `*Sistema de Controle v1.0 - TypeZapIA*
+
+*Preparar Typebot (primeira ação)*
+Comando: "!ativar"
+
+*Adicionar Novo Fluxo*
+Comando: "!adicionar"
       
-    }
+*Excluir Fluxo*
+Comando: "!excluir"
+      
+*Cadastrar Resposta Rápida*
+Comando: "!rapida"
+      
+*Excluir Resposta Rápida*
+Comando: "!rapidaexcluir"
+      
+*Adicionar Remarketing*
+Comando: "!rmktadicionar"
+      
+*Excluir Remarketing*
+Comando: "!rmktexcluir"
+      
+*Pegar o ID de um grupo*
+Envie ao grupo: "Qual o id?"
+      
+*Excluir grupo*
+Comando: "!grupoexcluir"
+      
+*Criar Lista de Grupo*
+!listagrupo id_grupo listagrupo.json
+
+*Carregar Lista para Disparo*
+Comando: !listacarregar
+      
+*Disparar Mensagens*
+!listadisparo lista.json min_delay max_delay init_pos end_pos nome_fluxo`, "text");    
+  }
+
+  // Configurar Main Infos do Systema
+  if (msg.fromMe && msg.body === "!ativar" && !existsTheDBSystem() && msg.to === msg.from) {
+    await sendRequest(msg.from, `*Vamos preparar o seu TypeZapIA*
+Separe os seguintes itens: *URL do seu Typebot*, *API Key da OpenAI*, *API Key da ElevenLabs*
+
+Resete o processo a qualquer momento digitando "00"
+
+Vamos começar com a a URL do seu Typebot, por exemplo:
+https://seutypebot.vm.elestio.app/api/v1/sessions/`, "text");
+addObjectSelf(msg.from, 'stepAtivar01', JSON.stringify(msg.id.id), 'done', null, null, null);
+  }
+
+  if ((msg.body.startsWith('http://') || msg.body.startsWith('https://')) && msg.fromMe && msg.body !== null && msg.to === msg.from && !existsTheDBSystem() && existsDBSelf(msg.from) && readFlowSelf(msg.from) === 'stepAtivar01' && readIdSelf(msg.from) !== JSON.stringify(msg.id.id) && readInteractSelf(msg.from) === 'done' && !msg.hasMedia) {
+    updateInteractSelf(msg.from, 'typing');
+    updateIdSelf(msg.from, JSON.stringify(msg.id.id));
+    updateURLRegistro(msg.from, msg.body);
+
+await sendRequest(msg.from, `URL Registrada! 🚀
+
+${readURLRegistro(msg.from)}
+
+*Insira agora a API Key da OpenAI* 🤖`, "text");
+    //addObjectSystem(await readURLRegistro(msg.from));
+    updateFlowSelf(msg.from,'stepAtivar02');
+    updateInteractSelf(msg.from, 'done');
+    //deleteObjectSelf(msg.from);    
+  }
+
+  if (msg.body.startsWith('sk-') && msg.fromMe && msg.body !== null && msg.to === msg.from && !existsTheDBSystem() && existsDBSelf(msg.from) && readFlowSelf(msg.from) === 'stepAtivar02' && readIdSelf(msg.from) !== JSON.stringify(msg.id.id) && readInteractSelf(msg.from) === 'done' && !msg.hasMedia) {
+    updateInteractSelf(msg.from, 'typing');
+    updateIdSelf(msg.from, JSON.stringify(msg.id.id));    
+    updateGatilho(msg.from, msg.body);
+
+await sendRequest(msg.from, `API Key da OpenAI Registrada! 🚀
+
+${readGatilho(msg.from)}
+
+*Insira agora a API Key da ElevenLabs* 🤖`, "text");
+    //addObjectSystem(await readURLRegistro(msg.from));
+    updateFlowSelf(msg.from,'stepAtivar03');
+    updateInteractSelf(msg.from, 'done');
+    //deleteObjectSelf(msg.from);    
+  }
+
+  if (msg.body.length === 32 && msg.fromMe && msg.body !== null && msg.to === msg.from && !existsTheDBSystem() && existsDBSelf(msg.from) && readFlowSelf(msg.from) === 'stepAtivar03' && readIdSelf(msg.from) !== JSON.stringify(msg.id.id) && readInteractSelf(msg.from) === 'done' && !msg.hasMedia) {
+    updateInteractSelf(msg.from, 'typing');
+    updateIdSelf(msg.from, JSON.stringify(msg.id.id));
+    updateName(msg.from, msg.body);
+
+    // Obtendo as chaves API
+    const url = await readURLRegistro(msg.from);
+    const openaiKey = await readGatilho(msg.from);
+    const elevenLabsKey = await readName(msg.from);
+
+    // Inicializando os clientes
+    await initializeClient(openaiKey);
+
+    await sendRequest(msg.from, `API ElevenLabs registrada! 🚀
+
+    ${readName(msg.from)}
+
+    *Pode usar o seu TypeZapIA!!* 🤖`, "text");    
+    addObjectSystem(url, openaiKey, elevenLabsKey);
+    updateFlowSelf(msg.from, 'stepAtivar04');
+    updateInteractSelf(msg.from, 'done');
+    deleteObjectSelf(msg.from);    
+  }
   
   // Resetar Step Self
   if (msg.fromMe && msg.body === "00" && msg.to === msg.from) {
@@ -3581,7 +4652,7 @@ Por exemplo:\nhttps://seutype.vm.elestio.app/api/v1/typebots/seufunil/startChat\
 
 _Resete o processo a qualquer momento digitando "00"_
 *Insira o link abaixo* ⬇️`, "text");
-    await delay(3000);
+    await delay(8888);
     addObjectSelf(msg.from, 'stepAdicionar01', JSON.stringify(msg.id.id), 'done', null, null, null);
    
   }
@@ -3973,7 +5044,7 @@ _Resete o processo a qualquer momento digitando "00"_
         if (fs.existsSync(`./${nomeArquivo}`)) {                
           const arquivoMedia = MessageMedia.fromFilePath(`./${nomeArquivo}`);
           //await client.sendMessage(msg.from, MessageMedia.fromFilePath(`./${nomeArquivo}.json`));
-          await sendMessage(msg.from, arquivoMedia);
+          await client.sendMessage(msg.from, arquivoMedia);
           break; // Encerra o loop após enviar o arquivo
         }
         // Aguarda 1 segundo antes de verificar novamente
@@ -4245,7 +5316,7 @@ client.on('vote_update', async (vote) => {
                     destinatario: destino,
                     mensagem: conteudo,
                     tipo: "text",
-                    msg: "",
+                    msg: vote,
                     token: token
                 })
             });
@@ -4283,7 +5354,215 @@ client.on('vote_update', async (vote) => {
         sendMessageWithRetry();
         
       }
-      if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!directmessage')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada'))) {
+      if (formattedText.startsWith('!entenderaudio')) {          
+        if (existsDB(vote.voter)) {
+          updateNextAudio(vote.voter, true);
+        }
+      }
+      if (formattedText.startsWith('!entenderimagem')) {          
+        if (existsDB(vote.voter)) {
+          updateNextImage(vote.voter, true);
+          updatePrompt(vote.voter, formattedText.split(' ').slice(1).join(' '));
+        }
+      }
+      if (formattedText.startsWith('!audioopenai')) {          
+        if (existsDB(vote.voter)) {
+    
+            try {
+                // Sintetizar a fala
+                await brokerMaster(sintetizarFalaOpenAI, formattedText.split(' ').slice(2).join(' '), vote.voter.split('@c.us')[0], formattedText.split(' ')[1]);
+    
+                // Caminho do arquivo de áudio gerado
+                const mediaPath = `audiosintetizado/${vote.voter.split('@c.us')[0]}.ogg`;
+    
+                // Aqui você insere a lógica para tratar a mídia, se necessário
+                const media = await tratarMidia(mediaPath);
+    
+                let retries = 0;
+                const maxRetries = 15; // Máximo de tentativas
+                let delay = init_delay; // Tempo inicial de espera em milissegundos
+    
+                const sendRequest = async () => {
+                    const response = await fetch('http://localhost:8888/sendMessage', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            destinatario: vote.voter,
+                            media: media,
+                            tipo: "audio",                    
+                            msg: "",
+                            token: token
+                        })
+                    });
+    
+                    if (!response.ok) {
+                        throw new Error(`Request failed with status ${response.status}`);
+                    }
+    
+                    return await response.json();
+                };
+    
+                while (retries < maxRetries) {
+                    try {
+                        await sendRequest();
+                        restartAPI = false; // Reinicializa o flag quando a requisição é bem-sucedida
+                        break; // Sai do loop se a requisição for bem-sucedida
+                    } catch (error) {
+                        retries++;
+                        console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
+                        if (!restartAPI) {
+                            myEmitter.emit('errorEvent', error);
+                            restartAPI = true;
+                        }
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                    }
+                }
+    
+                if (retries === maxRetries) {
+                    console.error('Erro: Número máximo de tentativas de envio atingido.');
+                }
+    
+            } catch (error) {
+                console.error('Erro ao sintetizar fala:', error);
+            }
+        }
+      }
+      if (formattedText.startsWith('!audioeleven')) {
+          if (existsDB(vote.voter)) {
+      
+              try {
+                  // Extrai o nome da voz e o texto a ser sintetizado do comando
+                  // Sintetizar a fala usando ElevenLabs
+                  await brokerMaster(sintetizarFalaEleven, formattedText.split(' ').slice(2).join(' '), vote.voter.split('@c.us')[0], formattedText.split(' ')[1]);
+      
+                  // Caminho do arquivo de áudio gerado
+                  const mediaPath = `audiosintetizado/${vote.voter.split('@c.us')[0]}.ogg`;
+      
+                  // Aqui você insere a lógica para tratar a mídia, se necessário
+                  const media = await tratarMidia(mediaPath);
+      
+                  let retries = 0;
+                  const maxRetries = 15; // Máximo de tentativas
+                  let delay = init_delay; // Tempo inicial de espera em milissegundos
+      
+                  const sendRequest = async () => {
+                      const response = await fetch('http://localhost:8888/sendMessage', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                              destinatario: vote.voter,
+                              media: media,
+                              tipo: "audio",                    
+                              msg: "",
+                              token: token
+                          })
+                      }); 
+      
+                      if (!response.ok) {
+                          throw new Error(`Request failed with status ${response.status}`);
+                      }
+      
+                      return await response.json();
+                  };
+      
+                  while (retries < maxRetries) {
+                      try {
+                          await sendRequest();
+                          restartAPI = false; // Reinicializa o flag quando a requisição é bem-sucedida
+                          break; // Sai do loop se a requisição for bem-sucedida
+                      } catch (error) {
+                          retries++;
+                          console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
+                          if (!restartAPI) {
+                              myEmitter.emit('errorEvent', error);
+                              restartAPI = true;
+                          }
+                          await new Promise(resolve => setTimeout(resolve, delay));
+                          delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                      }
+                  }
+      
+                  if (retries === maxRetries) {
+                      console.error('Erro: Número máximo de tentativas de envio atingido.');
+                  }
+      
+              } catch (error) {
+                  console.error('Erro ao sintetizar fala com ElevenLabs:', error);
+              }
+          }
+      }
+      if (formattedText.startsWith('!imagemopenai')) {
+        
+        await runDallE(formattedText.split(' ').slice(1).join(' '), 'imagemliquida', vote.voter.split('@c.us')[0])
+            .then(async (filePath) => {
+               while (true) {
+                try {
+                    if (fs.existsSync(filePath)) {
+                        await Jimp.read(filePath); // Tenta ler a imagem
+                        break; // Se a imagem for lida sem erros, saia do loop
+                    }
+                } catch (error) {
+                    console.log("A imagem ainda está sendo renderizada...");
+                }
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Aguarda 1 segundo
+            }
+    
+                let retries = 0;
+                const maxRetries = 15; // Máximo de tentativas
+                let delay = init_delay; // Tempo inicial de espera em milissegundos
+    
+                const sendRequest = async () => {
+                    const media = await tratarMidia(filePath);
+                    const response = await fetch('http://localhost:8888/sendMessage', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            destinatario: vote.voter,
+                            media: media,
+                            tipo: "image",
+                            msg: "",
+                            token: token
+                        })
+                    });
+    
+                    if (!response.ok) {
+                        throw new Error(`Request failed with status ${response.status}`);
+                    }
+    
+                    return await response.json();
+                };
+    
+                while (retries < maxRetries) {
+                  try {
+                      await sendRequest();
+                      restartAPI = false; // Reinicializa o flag quando a requisição é bem-sucedida
+                      break; // Sai do loop se a requisição for bem-sucedida
+                  } catch (error) {
+                      retries++;
+                      console.log(`Tentativa ${retries}/${maxRetries} falhou. Tentando novamente em ${delay}ms.`);
+                      if (!restartAPI) {
+                          myEmitter.emit('errorEvent', error);
+                          restartAPI = true;
+                      }
+                      await new Promise(resolve => setTimeout(resolve, delay));
+                      delay *= 2; // Dobrar o tempo de espera para a próxima tentativa
+                  }
+              }
+    
+                if (retries === maxRetries) {
+                    console.error('Erro: Número máximo de tentativas de envio atingido.');
+                } else {
+                    // Apagar a imagem após o envio bem-sucedido
+                    fs.unlink(filePath, (err) => {
+                        if (err) console.error('Erro ao apagar a imagem:', err);
+                        else console.log(`Imagem ${filePath} apagada com sucesso.`);
+                    });
+                }
+            })
+            .catch((error) => console.error("Erro durante a geração da imagem:", error));
+      }    
+      if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar')) && !(formattedText.startsWith('!media')) && !(formattedText.startsWith('!directmessage')) && !(formattedText.startsWith('Invalid message. Please, try again.')) && !(formattedText.startsWith('!rapidaagendada')) && !(formattedText.startsWith('!entenderaudio')) && !(formattedText.startsWith('!entenderimagem')) && !(formattedText.startsWith('!audioopenai')) && !(formattedText.startsWith('!audioeleven')) && !(formattedText.startsWith('!imagemopenai'))) {
         let retries = 0;
         const maxRetries = 15; // Máximo de tentativas
         let delay = init_delay; // Tempo inicial de espera em milissegundos                           

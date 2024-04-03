@@ -150,11 +150,11 @@ const client = new Client({
       '--single-process', // <- Este não funciona no Windows, apague caso suba numa máquina Windows
       '--disable-gpu'
     ]
-  },
+  }/*,
   webVersionCache: {
       type: 'remote',
       remotePath: `https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/${wwebVersion}.html`,
-  }
+  }*/
 });
 
   async function sendMessageWithRetry(phoneNumber, messageToSend) {
@@ -261,7 +261,47 @@ client.on('qr', qr => {
     }
   });
 
-  client.initialize();
+  //client.initialize();
+
+// Defina uma função para inicializar o cliente
+function initializeClient() {
+  // Tente inicializar o cliente
+  try {
+      client.initialize();
+      console.log("Cliente inicializado com sucesso!");
+      // Se a inicialização for bem-sucedida, retorne true
+      return true;
+  } catch (error) {
+      // Se ocorrer um erro, registre o erro e retorne false
+      console.error("Erro ao inicializar o cliente:", error);
+      return false;
+  }
+}
+
+// Defina o número máximo de tentativas
+const maxAttempts = 3;
+let attempts = 0;
+
+// Loop para tentar inicializar o cliente até que a inicialização seja bem-sucedida ou atinja o número máximo de tentativas
+while (attempts < maxAttempts) {
+  console.log(`Tentativa ${attempts + 1} de inicialização do cliente...`);
+  if (initializeClient()) {
+      // Se a inicialização for bem-sucedida, saia do loop
+      break;
+  } else {
+      // Se a inicialização falhar, aguarde um tempo antes de tentar novamente
+      const delayInSeconds = 45; // Tempo de espera em segundos
+      console.log(`Esperando ${delayInSeconds} segundos antes da próxima tentativa...`);
+      await new Promise(resolve => setTimeout(resolve, delayInSeconds * 1000));
+      attempts++;
+  }
+}
+
+if (attempts === maxAttempts) {
+  console.log("Número máximo de tentativas atingido. Falha na inicialização do cliente.");
+} else {
+  console.log("Cliente inicializado com sucesso após", attempts + 1, "tentativa(s).");
+}
 
   io.on('connection', (socket) => {
     console.log('Um usuário se conectou');     

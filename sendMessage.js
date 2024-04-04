@@ -242,6 +242,7 @@ client.on('qr', qr => {
   });
   
   // Evento 'authenticated'
+  const exec = require('child_process').exec;
   let reconnect = false;
 client.on('authenticated', () => {
     console.log('Autenticação bem-sucedida.');

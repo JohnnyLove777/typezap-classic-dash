@@ -242,18 +242,25 @@ client.on('qr', qr => {
   });
   
   // Evento 'authenticated'
-  client.on('authenticated', () => {
+  let reconnect = false;
+client.on('authenticated', () => {
     console.log('Autenticação bem-sucedida.');
-    io.emit('authenticated', 'Autenticação bem-sucedida.');
-  exec('pm2 restart sendMessage', (err, stdout, stderr) => {
-    if (err) {
-        console.error('Erro ao tentar reiniciar o sendMessage:', err);
-        return;
+    if (!reconnect) {
+        io.emit('authenticated', 'Autenticação bem-sucedida, reiniciando server (Exodus fix).');
+        // Insere um atraso de 10 segundos
+        setTimeout(() => {
+            exec('pm2 restart sendMessage', (err, stdout, stderr) => {
+                if (err) {
+                    console.error('Erro ao tentar reiniciar o sendMessage:', err);
+                    return;
+                }
+                reconnect = true;
+                console.log('Saída do comando de reinicialização sendMessage:', stdout);
+            });
+        }, 10000); // 10 segundos em milissegundos
     }
-    console.log('Saída do comando de reinicialização sendMessage:', stdout);
+    io.emit('authenticated', 'Autenticação bem-sucedida.');
 });
-  io.emit('authenticated', 'Autenticação bem-sucedida.');
-  });
   
   client.on('disconnected', (reason) => {
     console.log(`Cliente desconectado: ${reason}`);

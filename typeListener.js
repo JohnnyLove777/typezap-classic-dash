@@ -106,18 +106,24 @@ client.on('ready', () => {
   io.emit('connection-ready', 'Listener pronto e conectado.');
 });
 
-// Evento 'authenticated'
+let reconnect = false;
 client.on('authenticated', () => {
-  console.log('Autenticação bem-sucedida.');
-  io.emit('authenticated', 'Autenticação bem-sucedida.');
-  exec('pm2 restart typeListener', (err, stdout, stderr) => {
-    if (err) {
-        console.error('Erro ao tentar reiniciar o typeListener:', err);
-        return;
+    console.log('Autenticação bem-sucedida.');
+    if (!reconnect) {
+        io.emit('authenticated', 'Autenticação bem-sucedida, reiniciando server (Exodus fix).');
+        // Insere um atraso de 10 segundos
+        setTimeout(() => {
+            exec('pm2 restart typeListener', (err, stdout, stderr) => {
+                if (err) {
+                    console.error('Erro ao tentar reiniciar o typeListener:', err);
+                    return;
+                }
+                reconnect = true;
+                console.log('Saída do comando de reinicialização typeListener:', stdout);
+            });
+        }, 10000); // 10 segundos em milissegundos
     }
-    console.log('Saída do comando de reinicialização typeListener:', stdout);
-});
-  io.emit('authenticated', 'Autenticação bem-sucedida.');
+    io.emit('authenticated', 'Autenticação bem-sucedida.');
 });
 
 client.on('disconnected', (reason) => {

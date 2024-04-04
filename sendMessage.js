@@ -245,6 +245,20 @@ client.on('qr', qr => {
 
   const DATABASE_FILE_RELOGGIN = 'relogginDB.json';
 
+  function readJSONFile(nomeArquivo) {
+    if (fs.existsSync(nomeArquivo)) {
+      const dados = fs.readFileSync(nomeArquivo);
+      return JSON.parse(dados);
+    } else {
+      return [];
+    }
+  }
+  
+  function writeJSONFile(nomeArquivo, dados) {
+    const dadosJSON = JSON.stringify(dados, null, 2);
+    fs.writeFileSync(nomeArquivo, dadosJSON);
+  }
+
 function addReloggin(sessionid, reconnect) {
   const relogginData = readJSONFile(DATABASE_FILE_RELOGGIN);
 

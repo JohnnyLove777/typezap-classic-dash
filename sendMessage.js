@@ -10,6 +10,8 @@ const cors = require('cors');
 const fs = require('fs');
 const { Client, Buttons, List, MessageMedia, LocalAuth } = require('whatsapp-web.js');
 require('dotenv').config();
+const pm2 = require('pm2');
+
 
 // Gere o seu token 32 caracteres
 const SECURITY_TOKEN = "a9387747d4069f22fca5903858cdda24";
@@ -303,23 +305,29 @@ function existsReloggin(sessionid) {
   if(!existsReloggin(sessao)){
     addReloggin(sessao,false);
   }
+
+  pm2.on('error', (error) => {
+    if (error.service === 'sendMessage') {        
+
+        if (!readReloggin(sessao)) {
+            io.emit('authenticated', 'Autenticação bem-sucedida, reiniciando server (Exodus fix).');
+            // Insere um atraso de 10 segundos
+            updateReloggin(sessao, true);
+            setTimeout(() => {
+                exec('pm2 restart sendMessage', (err, stdout, stderr) => {
+                    if (err) {
+                        console.error('Erro ao tentar reiniciar o sendMessage:', err);
+                        return;
+                    }
+                    console.log('Saída do comando de reinicialização sendMessage:', stdout);
+                });
+            }, 10000); // 10 segundos em milissegundos
+        }
+    }
+});
   
   client.on('authenticated', () => {
-      console.log('Autenticação bem-sucedida.');
-      if (!readReloggin(sessao)) {
-          io.emit('authenticated', 'Autenticação bem-sucedida, reiniciando server (Exodus fix).');
-          // Insere um atraso de 10 segundos
-          updateReloggin(sessao,true);
-          setTimeout(() => {
-              exec('pm2 restart sendMessage', (err, stdout, stderr) => {
-                  if (err) {
-                      console.error('Erro ao tentar reiniciar o sendMessage:', err);
-                      return;
-                  }                
-                  console.log('Saída do comando de reinicialização sendMessage:', stdout);
-              });
-          }, 10000); // 10 segundos em milissegundos
-      }
+      console.log('Autenticação bem-sucedida.');      
       io.emit('authenticated', 'Autenticação bem-sucedida.');
   });
   

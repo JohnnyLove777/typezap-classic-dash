@@ -12,6 +12,7 @@ const wss = new WebSocket.Server({ server });
 //const qrcode = require('qrcode-terminal');
 const path = require('path');
 const { Client, Buttons, List, MessageMedia, LocalAuth, Poll } = require('whatsapp-web.js');
+const pm2 = require('pm2');
 
 const DATABASE_FILE = "typesessaodb.json";
 const token = "a9387747d4069f22fca5903858cdda24";
@@ -151,22 +152,28 @@ if(!existsReloggin(sessao)){
   addReloggin(sessao,false);
 }
 
+pm2.on('error', (error) => {
+  if (error.service === 'typeListener') {        
+
+      if (!readReloggin(sessao)) {
+          io.emit('authenticated', 'Autenticação bem-sucedida, reiniciando server (Exodus fix).');
+          // Insere um atraso de 10 segundos
+          updateReloggin(sessao, true);
+          setTimeout(() => {
+              exec('pm2 restart typeListener', (err, stdout, stderr) => {
+                  if (err) {
+                      console.error('Erro ao tentar reiniciar o typeListener:', err);
+                      return;
+                  }
+                  console.log('Saída do comando de reinicialização typeListener:', stdout);
+              });
+          }, 10000); // 10 segundos em milissegundos
+      }
+  }
+});
+
 client.on('authenticated', () => {
-    console.log('Autenticação bem-sucedida.');
-    if (!readReloggin(sessao)) {
-        io.emit('authenticated', 'Autenticação bem-sucedida, reiniciando server (Exodus fix).');
-        // Insere um atraso de 10 segundos
-        updateReloggin(sessao,true);
-        setTimeout(() => {
-            exec('pm2 restart typeListener', (err, stdout, stderr) => {
-                if (err) {
-                    console.error('Erro ao tentar reiniciar o typeListener:', err);
-                    return;
-                }                
-                console.log('Saída do comando de reinicialização typeListener:', stdout);
-            });
-        }, 10000); // 10 segundos em milissegundos
-    }
+    console.log('Autenticação bem-sucedida.');    
     io.emit('authenticated', 'Autenticação bem-sucedida.');
 });
 

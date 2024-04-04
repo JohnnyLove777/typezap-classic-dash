@@ -106,19 +106,63 @@ client.on('ready', () => {
   io.emit('connection-ready', 'Listener pronto e conectado.');
 });
 
-let reconnect = false;
+const DATABASE_FILE_RELOGGIN = 'relogginDB.json';
+
+function addReloggin(sessionid, reconnect) {
+  const relogginData = readJSONFile(DATABASE_FILE_RELOGGIN);
+
+  const existingEntry = relogginData.find(entry => entry.sessionid === sessionid);
+  if (existingEntry) {
+    throw new Error('A entrada para esta sessão já existe no banco de dados.');
+  }
+
+  const newEntry = { sessionid, reconnect };
+  relogginData.push(newEntry);
+  writeJSONFile(DATABASE_FILE_RELOGGIN, relogginData);
+}
+
+function readReloggin(sessionid) {
+  const relogginData = readJSONFile(DATABASE_FILE_RELOGGIN);
+  const entry = relogginData.find(entry => entry.sessionid === sessionid);
+  return entry ? entry.reconnect : undefined;
+}
+
+function updateReloggin(sessionid, reconnect) {
+  const relogginData = readJSONFile(DATABASE_FILE_RELOGGIN);
+  const entryIndex = relogginData.findIndex(entry => entry.sessionid === sessionid);
+  if (entryIndex !== -1) {
+    relogginData[entryIndex].reconnect = reconnect;
+    writeJSONFile(DATABASE_FILE_RELOGGIN, relogginData);
+  }
+}
+
+function deleteReloggin(sessionid) {
+  const relogginData = readJSONFile(DATABASE_FILE_RELOGGIN);
+  const updatedData = relogginData.filter(entry => entry.sessionid !== sessionid);
+  writeJSONFile(DATABASE_FILE_RELOGGIN, updatedData);
+}
+
+function existsReloggin(sessionid) {
+  const relogginData = readJSONFile(DATABASE_FILE_RELOGGIN);
+  return relogginData.some(entry => entry.sessionid === sessionid);
+}
+
+if(!existsReloggin(sessao)){
+  addReloggin(sessao,false);
+}
+
 client.on('authenticated', () => {
     console.log('Autenticação bem-sucedida.');
-    if (!reconnect) {
+    if (!readReloggin(sessao)) {
         io.emit('authenticated', 'Autenticação bem-sucedida, reiniciando server (Exodus fix).');
         // Insere um atraso de 10 segundos
+        updateReloggin(sessao,true);
         setTimeout(() => {
             exec('pm2 restart typeListener', (err, stdout, stderr) => {
                 if (err) {
                     console.error('Erro ao tentar reiniciar o typeListener:', err);
                     return;
-                }
-                reconnect = true;
+                }                
                 console.log('Saída do comando de reinicialização typeListener:', stdout);
             });
         }, 10000); // 10 segundos em milissegundos

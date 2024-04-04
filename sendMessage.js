@@ -243,25 +243,29 @@ client.on('qr', qr => {
   
   // Evento 'authenticated'
   const exec = require('child_process').exec;
-  let reconnect = false;
-client.on('authenticated', () => {
-    console.log('Autenticação bem-sucedida.');
-    if (!reconnect) {
-        io.emit('authenticated', 'Autenticação bem-sucedida, reiniciando server (Exodus fix).');
-        // Insere um atraso de 10 segundos
-        setTimeout(() => {
-            exec('pm2 restart sendMessage', (err, stdout, stderr) => {
-                if (err) {
-                    console.error('Erro ao tentar reiniciar o sendMessage:', err);
-                    return;
-                }
-                reconnect = true;
-                console.log('Saída do comando de reinicialização sendMessage:', stdout);
-            });
-        }, 10000); // 10 segundos em milissegundos
-    }
-    io.emit('authenticated', 'Autenticação bem-sucedida.');
-});
+
+  if(!existsReloggin(sessao)){
+    addReloggin(sessao,false);
+  }
+  
+  client.on('authenticated', () => {
+      console.log('Autenticação bem-sucedida.');
+      if (!readReloggin(sessao)) {
+          io.emit('authenticated', 'Autenticação bem-sucedida, reiniciando server (Exodus fix).');
+          // Insere um atraso de 10 segundos
+          updateReloggin(sessao,true);
+          setTimeout(() => {
+              exec('pm2 restart sendMessage', (err, stdout, stderr) => {
+                  if (err) {
+                      console.error('Erro ao tentar reiniciar o sendMessage:', err);
+                      return;
+                  }                
+                  console.log('Saída do comando de reinicialização sendMessage:', stdout);
+              });
+          }, 10000); // 10 segundos em milissegundos
+      }
+      io.emit('authenticated', 'Autenticação bem-sucedida.');
+  });
   
   client.on('disconnected', (reason) => {
     console.log(`Cliente desconectado: ${reason}`);

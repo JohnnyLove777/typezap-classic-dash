@@ -152,25 +152,47 @@ if(!existsReloggin(sessao)){
   addReloggin(sessao,false);
 }
 
-pm2.on('error', (error) => {
-  if (error.service === 'typeListener') {        
+// Conectando ao daemon do PM2
+pm2.connect((err) => {
+    if (err) {
+        console.error('Erro ao conectar-se ao PM2:', err);
+        process.exit(1);
+    }
 
-      if (!readReloggin(sessao)) {
-          io.emit('authenticated', 'Autenticação bem-sucedida, reiniciando server (Exodus fix).');
-          // Insere um atraso de 10 segundos
-          updateReloggin(sessao, true);
-          setTimeout(() => {
-              exec('pm2 restart typeListener', (err, stdout, stderr) => {
-                  if (err) {
-                      console.error('Erro ao tentar reiniciar o typeListener:', err);
-                      return;
-                  }
-                  console.log('Saída do comando de reinicialização typeListener:', stdout);
-              });
-          }, 10000); // 10 segundos em milissegundos
-      }
-  }
+    // Assim que conectado, você pode adicionar os eventos
+    pm2.launchBus((err, bus) => {
+        if (err) {
+            console.error('Erro ao lançar o bus do PM2:', err);
+            process.exit(1);
+        }
+
+        // Adicionando um listener para o evento 'log:err' do processo 'typeListener'
+        bus.on('log:err', (data) => {
+            if (data.process.name === 'typeListener') {
+                handleTypeListenerError(data);
+            }
+        });
+    });
 });
+
+function handleTypeListenerError(data) {
+    // Lógica para lidar com o erro do processo 'typeListener'
+    
+    if (!readReloggin(sessao)) {
+        io.emit('authenticated', 'Autenticação bem-sucedida, reiniciando server (Exodus fix).');
+        // Insere um atraso de 10 segundos
+        updateReloggin(sessao, true);
+        setTimeout(() => {
+            pm2.restart('typeListener', (err) => {
+                if (err) {
+                    console.error('Erro ao tentar reiniciar o typeListener:', err);
+                    return;
+                }
+                console.log('typeListener reiniciado com sucesso.');
+            });
+        }, 10000); // 10 segundos em milissegundos
+    }
+}
 
 client.on('authenticated', () => {
     console.log('Autenticação bem-sucedida.');    

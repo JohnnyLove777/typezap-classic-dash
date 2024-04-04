@@ -306,24 +306,43 @@ function existsReloggin(sessionid) {
     addReloggin(sessao,false);
   }
 
-  pm2.on('error', (error) => {
-    if (error.service === 'sendMessage') {        
+  const pm2 = require('pm2');
 
-        if (!readReloggin(sessao)) {
-            io.emit('authenticated', 'Autenticação bem-sucedida, reiniciando server (Exodus fix).');
-            // Insere um atraso de 10 segundos
-            updateReloggin(sessao, true);
-            setTimeout(() => {
-                exec('pm2 restart sendMessage', (err, stdout, stderr) => {
-                    if (err) {
-                        console.error('Erro ao tentar reiniciar o sendMessage:', err);
-                        return;
-                    }
-                    console.log('Saída do comando de reinicialização sendMessage:', stdout);
-                });
-            }, 10000); // 10 segundos em milissegundos
-        }
+// Conectando ao daemon do PM2
+pm2.connect((err) => {
+    if (err) {
+        console.error('Erro ao conectar-se ao PM2:', err);
+        process.exit(1);
     }
+
+    // Assim que conectado, você pode adicionar os eventos
+    pm2.launchBus((err, bus) => {
+        if (err) {
+            console.error('Erro ao lançar o bus do PM2:', err);
+            process.exit(1);
+        }
+
+        // Adicionando um listener para o evento 'log:err'
+        bus.on('log:err', (data) => {
+            if (data.process.name === 'sendMessage') {                
+
+                if (!readReloggin(sessao)) {
+                    io.emit('authenticated', 'Autenticação bem-sucedida, reiniciando server (Exodus fix).');
+                    // Insere um atraso de 10 segundos
+                    updateReloggin(sessao, true);
+                    setTimeout(() => {
+                        pm2.restart('sendMessage', (err) => {
+                            if (err) {
+                                console.error('Erro ao tentar reiniciar o sendMessage:', err);
+                                return;
+                            }
+                            console.log('sendMessage reiniciado com sucesso.');
+                        });
+                    }, 10000); // 10 segundos em milissegundos
+                }
+            }
+        });
+    });
 });
   
   client.on('authenticated', () => {

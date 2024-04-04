@@ -242,6 +242,48 @@ client.on('qr', qr => {
   });
   
   // Evento 'authenticated'
+
+  const DATABASE_FILE_RELOGGIN = 'relogginDB.json';
+
+function addReloggin(sessionid, reconnect) {
+  const relogginData = readJSONFile(DATABASE_FILE_RELOGGIN);
+
+  const existingEntry = relogginData.find(entry => entry.sessionid === sessionid);
+  if (existingEntry) {
+    throw new Error('A entrada para esta sessão já existe no banco de dados.');
+  }
+
+  const newEntry = { sessionid, reconnect };
+  relogginData.push(newEntry);
+  writeJSONFile(DATABASE_FILE_RELOGGIN, relogginData);
+}
+
+function readReloggin(sessionid) {
+  const relogginData = readJSONFile(DATABASE_FILE_RELOGGIN);
+  const entry = relogginData.find(entry => entry.sessionid === sessionid);
+  return entry ? entry.reconnect : undefined;
+}
+
+function updateReloggin(sessionid, reconnect) {
+  const relogginData = readJSONFile(DATABASE_FILE_RELOGGIN);
+  const entryIndex = relogginData.findIndex(entry => entry.sessionid === sessionid);
+  if (entryIndex !== -1) {
+    relogginData[entryIndex].reconnect = reconnect;
+    writeJSONFile(DATABASE_FILE_RELOGGIN, relogginData);
+  }
+}
+
+function deleteReloggin(sessionid) {
+  const relogginData = readJSONFile(DATABASE_FILE_RELOGGIN);
+  const updatedData = relogginData.filter(entry => entry.sessionid !== sessionid);
+  writeJSONFile(DATABASE_FILE_RELOGGIN, updatedData);
+}
+
+function existsReloggin(sessionid) {
+  const relogginData = readJSONFile(DATABASE_FILE_RELOGGIN);
+  return relogginData.some(entry => entry.sessionid === sessionid);
+}
+
   const exec = require('child_process').exec;
 
   if(!existsReloggin(sessao)){

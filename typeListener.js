@@ -12,6 +12,7 @@ const wss = new WebSocket.Server({ server });
 //const qrcode = require('qrcode-terminal');
 const path = require('path');
 const { Client, Buttons, List, MessageMedia, LocalAuth, Poll } = require('whatsapp-web.js');
+const pm2 = require('pm2');
 
 const DATABASE_FILE = "typesessaodb.json";
 const token = "a9387747d4069f22fca5903858cdda24";
@@ -53,11 +54,11 @@ const client = new Client({
       '--single-process', // <- Este não funciona no Windows, apague caso suba numa máquina Windows
       '--disable-gpu'
     ]
-  },
+  }/*,
   webVersionCache: {
       type: 'remote',
       remotePath: `https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/${wwebVersion}.html`,
-  }
+  }*/
 });
 
 async function sendMessage(phoneNumber, messageToSend) {
@@ -106,10 +107,96 @@ client.on('ready', () => {
   io.emit('connection-ready', 'Listener pronto e conectado.');
 });
 
-// Evento 'authenticated'
+const DATABASE_FILE_RELOGGIN = 'relogginDB.json';
+
+function addReloggin(sessionid, reconnect) {
+  const relogginData = readJSONFile(DATABASE_FILE_RELOGGIN);
+
+  const existingEntry = relogginData.find(entry => entry.sessionid === sessionid);
+  if (existingEntry) {
+    throw new Error('A entrada para esta sessão já existe no banco de dados.');
+  }
+
+  const newEntry = { sessionid, reconnect };
+  relogginData.push(newEntry);
+  writeJSONFile(DATABASE_FILE_RELOGGIN, relogginData);
+}
+
+function readReloggin(sessionid) {
+  const relogginData = readJSONFile(DATABASE_FILE_RELOGGIN);
+  const entry = relogginData.find(entry => entry.sessionid === sessionid);
+  return entry ? entry.reconnect : undefined;
+}
+
+function updateReloggin(sessionid, reconnect) {
+  const relogginData = readJSONFile(DATABASE_FILE_RELOGGIN);
+  const entryIndex = relogginData.findIndex(entry => entry.sessionid === sessionid);
+  if (entryIndex !== -1) {
+    relogginData[entryIndex].reconnect = reconnect;
+    writeJSONFile(DATABASE_FILE_RELOGGIN, relogginData);
+  }
+}
+
+function deleteReloggin(sessionid) {
+  const relogginData = readJSONFile(DATABASE_FILE_RELOGGIN);
+  const updatedData = relogginData.filter(entry => entry.sessionid !== sessionid);
+  writeJSONFile(DATABASE_FILE_RELOGGIN, updatedData);
+}
+
+function existsReloggin(sessionid) {
+  const relogginData = readJSONFile(DATABASE_FILE_RELOGGIN);
+  return relogginData.some(entry => entry.sessionid === sessionid);
+}
+
+if(!existsReloggin(sessao)){
+  addReloggin(sessao,false);
+}
+
+// Conectando ao daemon do PM2
+pm2.connect((err) => {
+    if (err) {
+        console.error('Erro ao conectar-se ao PM2:', err);
+        process.exit(1);
+    }
+
+    // Assim que conectado, você pode adicionar os eventos
+    pm2.launchBus((err, bus) => {
+        if (err) {
+            console.error('Erro ao lançar o bus do PM2:', err);
+            process.exit(1);
+        }
+
+        // Adicionando um listener para o evento 'log:err' do processo 'typeListener'
+        bus.on('log:err', (data) => {
+            if (data.process.name === 'typeListener') {
+                handleTypeListenerError(data);
+            }
+        });
+    });
+});
+
+function handleTypeListenerError(data) {
+    // Lógica para lidar com o erro do processo 'typeListener'
+    
+    if (!readReloggin(sessao)) {
+        io.emit('authenticated', 'Autenticação bem-sucedida, reiniciando server (Exodus fix).');
+        // Insere um atraso de 10 segundos
+        updateReloggin(sessao, true);
+        setTimeout(() => {
+            pm2.restart('typeListener', (err) => {
+                if (err) {
+                    console.error('Erro ao tentar reiniciar o typeListener:', err);
+                    return;
+                }
+                console.log('typeListener reiniciado com sucesso.');
+            });
+        }, 10000); // 10 segundos em milissegundos
+    }
+}
+
 client.on('authenticated', () => {
-  console.log('Autenticação bem-sucedida.');
-  io.emit('authenticated', 'Autenticação bem-sucedida.');
+    console.log('Autenticação bem-sucedida.');    
+    io.emit('authenticated', 'Autenticação bem-sucedida.');
 });
 
 client.on('disconnected', (reason) => {

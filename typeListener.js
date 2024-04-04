@@ -110,6 +110,14 @@ client.on('ready', () => {
 client.on('authenticated', () => {
   console.log('Autenticação bem-sucedida.');
   io.emit('authenticated', 'Autenticação bem-sucedida.');
+  exec('pm2 restart typeListener', (err, stdout, stderr) => {
+    if (err) {
+        console.error('Erro ao tentar reiniciar o typeListener:', err);
+        return;
+    }
+    console.log('Saída do comando de reinicialização typeListener:', stdout);
+});
+  io.emit('authenticated', 'Autenticação bem-sucedida.');
 });
 
 client.on('disconnected', (reason) => {
@@ -126,46 +134,7 @@ client.on('disconnected', (reason) => {
   }
 });
 
-// Função para inicializar o cliente
-async function initializeClient() {
-  try {
-      client.initialize();
-      console.log("Cliente inicializado com sucesso!");
-      return true;
-  } catch (error) {
-      console.error("Erro ao inicializar o cliente:", error);
-      return false;
-  }
-}
-
-// Defina o número máximo de tentativas
-const maxAttempts = 3;
-let attempts = 0;
-
-// Função para tentar inicializar o cliente até que a inicialização seja bem-sucedida ou atinja o número máximo de tentativas
-async function tryInitializeClient() {
-  while (attempts < maxAttempts) {
-      console.log(`Tentativa ${attempts + 1} de inicialização do cliente...`);
-      if (await initializeClient()) {
-          break;
-      } else {
-          const delayInSeconds = 5;
-          console.log(`Esperando ${delayInSeconds} segundos antes da próxima tentativa...`);
-          await new Promise(resolve => setTimeout(resolve, delayInSeconds * 1000));
-          attempts++;
-      }
-  }
-
-  if (attempts === maxAttempts) {
-      console.log("Número máximo de tentativas atingido. Falha na inicialização do cliente.");
-  } else {
-      console.log("Cliente inicializado com sucesso após", attempts + 1, "tentativa(s).");
-  }
-}
-
-// Chame a função para tentar inicializar o cliente
-tryInitializeClient();
-
+client.initialize();
 
 io.on('connection', (socket) => {
   console.log('Um usuário se conectou');     

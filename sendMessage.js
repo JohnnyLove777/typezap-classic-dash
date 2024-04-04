@@ -306,8 +306,6 @@ function existsReloggin(sessionid) {
     addReloggin(sessao,false);
   }
 
-  const pm2 = require('pm2');
-
 // Conectando ao daemon do PM2
 pm2.connect((err) => {
     if (err) {

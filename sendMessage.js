@@ -239,6 +239,7 @@ client.on('qr', qr => {
   
   // Evento 'ready'
   client.on('ready', () => {
+    updateReloggin(sessao, true);
     console.log('API de endpoint sendMessage pronta e conectada.');
     io.emit('connection-ready', 'API pronta e conectada.');
   });
@@ -313,21 +314,21 @@ pm2.connect((err) => {
         process.exit(1);
     }
 
-    // Assim que conectado, você pode adicionar os eventos
+    // Adicionamos os eventos de captura
     pm2.launchBus((err, bus) => {
         if (err) {
             console.error('Erro ao lançar o bus do PM2:', err);
             process.exit(1);
         }
 
-        // Adicionando um listener para o evento 'log:err'
+        // Listener para o evento de erro
         bus.on('log:err', (data) => {
             if (data.process.name === 'sendMessage') {                
 
                 if (!readReloggin(sessao)) {
                     io.emit('authenticated', 'Autenticação bem-sucedida, reiniciando server (Exodus fix).');
-                    // Insere um atraso de 10 segundos
-                    updateReloggin(sessao, true);
+                    // Delay 10 segundos para iniciar o restart
+                    //updateReloggin(sessao, true);
                     setTimeout(() => {
                         pm2.restart('sendMessage', (err) => {
                             if (err) {
@@ -336,7 +337,7 @@ pm2.connect((err) => {
                             }
                             console.log('sendMessage reiniciado com sucesso.');
                         });
-                    }, 10000); // 10 segundos em milissegundos
+                    }, 10000); // 10 segundos
                 }
             }
         });

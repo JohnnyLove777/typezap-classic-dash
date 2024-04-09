@@ -103,6 +103,7 @@ client.on('qr', qr => {
 
 // Evento 'ready'
 client.on('ready', () => {
+  updateReloggin(sessao, true);
   console.log('typeListener pronto e conectado.');
   io.emit('connection-ready', 'Listener pronto e conectado.');
 });
@@ -154,25 +155,39 @@ if(!existsReloggin(sessao)){
 
 // Conectando ao daemon do PM2
 pm2.connect((err) => {
-    if (err) {
-        console.error('Erro ao conectar-se ao PM2:', err);
-        process.exit(1);
-    }
+  if (err) {
+      console.error('Erro ao conectar-se ao PM2:', err);
+      process.exit(1);
+  }
 
-    // Assim que conectado, você pode adicionar os eventos
-    pm2.launchBus((err, bus) => {
-        if (err) {
-            console.error('Erro ao lançar o bus do PM2:', err);
-            process.exit(1);
-        }
+  // Adicionamos os eventos de captura
+  pm2.launchBus((err, bus) => {
+      if (err) {
+          console.error('Erro ao lançar o bus do PM2:', err);
+          process.exit(1);
+      }
 
-        // Adicionando um listener para o evento 'log:err' do processo 'typeListener'
-        bus.on('log:err', (data) => {
-            if (data.process.name === 'typeListener') {
-                handleTypeListenerError(data);
-            }
-        });
-    });
+      // Listener para o evento de erro
+      bus.on('log:err', (data) => {
+          if (data.process.name === 'typeListener') {                
+
+              //if (!readReloggin(sessao)) {
+                  io.emit('authenticated', 'Autenticação bem-sucedida, reiniciando server (Exodus fix).');
+                  // Delay 10 segundos para iniciar o restart
+                  //updateReloggin(sessao, true);
+                  setTimeout(() => {
+                      pm2.restart('typeListener', (err) => {
+                          if (err) {
+                              console.error('Erro ao tentar reiniciar o typeListener:', err);
+                              return;
+                          }
+                          console.log('typeListener reiniciado com sucesso.');
+                      });
+                  }, 10000); // 10 segundos
+              // }
+          }
+      });
+  });
 });
 
 function handleTypeListenerError(data) {

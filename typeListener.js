@@ -171,7 +171,7 @@ pm2.connect((err) => {
       bus.on('log:err', (data) => {
           if (data.process.name === 'typeListener') {                
 
-              if (!readReloggin(sessao)) {
+              //if (!readReloggin(sessao)) {
                   io.emit('authenticated', 'Autenticação bem-sucedida, reiniciando server (Exodus fix).');
                   // Delay 10 segundos para iniciar o restart
                   //updateReloggin(sessao, true);
@@ -184,7 +184,7 @@ pm2.connect((err) => {
                           console.log('typeListener reiniciado com sucesso.');
                       });
                   }, 10000); // 10 segundos
-              }
+              // }
           }
       });
   });

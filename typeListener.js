@@ -155,29 +155,6 @@ if(!existsReloggin(sessao)){
 
 // Conectando ao daemon do PM2
 pm2.connect((err) => {
-    if (err) {
-        console.error('Erro ao conectar-se ao PM2:', err);
-        process.exit(1);
-    }
-
-    // Assim que conectado, você pode adicionar os eventos
-    pm2.launchBus((err, bus) => {
-        if (err) {
-            console.error('Erro ao lançar o bus do PM2:', err);
-            process.exit(1);
-        }
-
-        // Adicionando um listener para o evento 'log:err' do processo 'typeListener'
-        bus.on('log:err', (data) => {
-            if (data.process.name === 'typeListener') {
-                handleTypeListenerError(data);
-            }
-        });
-    });
-});
-
-// Conectando ao daemon do PM2
-pm2.connect((err) => {
   if (err) {
       console.error('Erro ao conectar-se ao PM2:', err);
       process.exit(1);

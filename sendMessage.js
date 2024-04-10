@@ -152,7 +152,8 @@ const client = new Client({
       '--single-process', // <- Este não funciona no Windows, apague caso suba numa máquina Windows
       '--disable-gpu'
     ]
-  }/*,
+  },
+  webVersion: '2.2412.50'/*,
   webVersionCache: {
       type: 'remote',
       remotePath: `https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/${wwebVersion}.html`,
@@ -665,6 +666,7 @@ async function processAndSendMessageKiwify(event, idString) {
   if (messageToSend) {
     console.log(`Enviando mensagem para ${phoneNumber}: "${messageToSend}"`);
     // Aqui você chamaria a função de envio real, como: await sendMessageWithRetry(phoneNumber, messageToSend);
+    await sendMessageWithRetry(phoneNumber, messageToSend);
   }
 }
 

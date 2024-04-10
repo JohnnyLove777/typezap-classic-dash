@@ -665,6 +665,7 @@ async function processAndSendMessageKiwify(event, idString) {
   if (messageToSend) {
     console.log(`Enviando mensagem para ${phoneNumber}: "${messageToSend}"`);
     // Aqui você chamaria a função de envio real, como: await sendMessageWithRetry(phoneNumber, messageToSend);
+    await sendMessageWithRetry(phoneNumber, messageToSend);
   }
 }
 

@@ -55,7 +55,7 @@ const client = new Client({
       '--disable-gpu'
     ]
   },
-  webVersion: '2.2412.50'/*,
+  /*webVersion: '2.2412.50',
   webVersionCache: {
       type: 'remote',
       remotePath: `https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/${wwebVersion}.html`,
@@ -193,25 +193,6 @@ pm2.connect((err) => {
   });
 });
 
-function handleTypeListenerError(data) {
-    // Lógica para lidar com o erro do processo 'typeListener'
-    
-    if (!readReloggin(sessao)) {
-        io.emit('authenticated', 'Autenticação bem-sucedida, reiniciando server (Exodus fix).');
-        // Insere um atraso de 10 segundos
-        updateReloggin(sessao, true);
-        setTimeout(() => {
-            pm2.restart('typeListener', (err) => {
-                if (err) {
-                    console.error('Erro ao tentar reiniciar o typeListener:', err);
-                    return;
-                }
-                console.log('typeListener reiniciado com sucesso.');
-            });
-        }, 10000); // 10 segundos em milissegundos
-    }
-}
-
 client.on('authenticated', () => {
     console.log('Autenticação bem-sucedida.');    
     io.emit('authenticated', 'Autenticação bem-sucedida.');
@@ -222,10 +203,7 @@ client.on('disconnected', (reason) => {
   io.emit('disconnected', `Cliente desconectado: ${reason}`);
 
   if (reason === 'NAVIGATION') {
-      console.log('Reconectando instância e gerando novo QR code...');
-      client.destroy().then(() => {
-          client.initialize(); // Inicia uma nova instância
-      });
+    updateReloggin(sessao, false);
   } else {
       console.log('Razão de desconexão não requer a geração de um novo QR code.');
   }

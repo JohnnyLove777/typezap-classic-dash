@@ -153,7 +153,7 @@ const client = new Client({
       '--disable-gpu'
     ]
   },
-  webVersion: '2.2412.50'/*,
+  /*webVersion: '2.2412.50',
   webVersionCache: {
       type: 'remote',
       remotePath: `https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/${wwebVersion}.html`,
@@ -355,10 +355,7 @@ pm2.connect((err) => {
     io.emit('disconnected', `Cliente desconectado: ${reason}`);
 
     if (reason === 'NAVIGATION') {
-        console.log('Reconectando instância e gerando novo QR code...');
-        client.destroy().then(() => {
-            client.initialize(); // Inicia uma nova instância
-        });
+      updateReloggin(sessao, false);
     } else {
         console.log('Razão de desconexão não requer a geração de um novo QR code.');
     }

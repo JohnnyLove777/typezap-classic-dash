@@ -42,7 +42,7 @@ const client = new Client({
     //executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
     //===================================================================================
     // CAMINHO DO CHROME PARA LINUX (REMOVER O COMENTÁRIO ABAIXO)
-     executablePath: '/usr/bin/google-chrome-stable',
+    // executablePath: '/usr/bin/google-chrome-stable',
     //===================================================================================
     args: [
       '--no-sandbox', //Necessário para sistemas Linux

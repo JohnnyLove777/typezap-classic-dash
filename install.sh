@@ -55,6 +55,8 @@ echo "Instalando dependências do projeto..."
 npm install
 npm run install-deps
 
+sudo apt-get install libasound2t64
+
 sudo gdebi google-chrome-stable_current_amd64.deb -n
 sudo apt-get -f install -y
 

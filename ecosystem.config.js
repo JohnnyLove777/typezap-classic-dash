@@ -6,8 +6,8 @@ module.exports = {
       instances: 1,
       autorestart: false,
       watch: false,
-      max_memory_restart: '200M',
-      cron_restart: '0 3 */7 * *'
+      max_memory_restart: '500M',
+      cron_restart: '0 3 */3 * *'
     },
     {
       name: 'sendMessage',
